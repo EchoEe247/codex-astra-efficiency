@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**FOUNDATION / PRE-ASTRA VALIDATION**
+**FOUNDATION COMPLETE ENOUGH FOR INSTALLED-RUNTIME VALIDATION / PRE-ASTRA**
 
-The repository is private while the core integration and test methodology are established.
+The repository remains private while the native Codex path is proven against a real signed-in installation.
 
 ## Locked product direction
 
@@ -26,49 +26,70 @@ The repository is private while the core integration and test methodology are es
 
 ## Technical findings so far
 
-Current upstream Codex source provides a promising native integration path:
+Current upstream Codex source provides a strong native integration candidate:
 
-- hook events include `UserPromptSubmit` and `Stop`;
-- current hook schemas expose the active `model` on those turn-scoped events;
-- `UserPromptSubmit` can optionally return additional context;
-- Codex app-server exposes `account/rateLimits/read` and rolling limit updates;
-- the app-server wire protocol is newline-delimited JSON objects and intentionally omits the JSON-RPC `jsonrpc` field;
-- current initialize parameters use `clientInfo` plus optional capabilities;
-- current rate-limit responses expose window duration, used percent, reset time, plan type, multi-bucket data, ordinary-usage permission, and optional reset-credit summaries.
+- hooks are currently stable/default-enabled;
+- `UserPromptSubmit` and `Stop` expose `session_id`, `turn_id`, and active `model`;
+- `UserPromptSubmit` supports optional additional context, which remains disabled in baseline mode;
+- `CODEX_HOME` resolves from the environment override or defaults to `~/.codex`;
+- global hook configuration is read from the Codex home hook file;
+- app-server exposes `account/rateLimits/read`, `model/list`, and rolling limit updates;
+- app-server wire messages are newline-delimited JSON and intentionally omit a JSON-RPC `jsonrpc` field;
+- initialize uses `clientInfo` plus optional capabilities;
+- current rate-limit responses can expose duration, used percent, reset time, plan type, per-limit buckets, ordinary-usage permission, and reset-credit summaries;
+- current model catalog exposes exact native model id, display name, hidden/default state, reasoning efforts, and other picker metadata.
 
-These upstream findings are source-level reconnaissance until reproduced against an installed Codex release.
+These remain source/protocol findings until reproduced against the installed Codex version used for validation.
 
 ## Implemented foundation
 
 - Exact configured Astra model targeting with strict non-Astra no-op behavior.
-- Fail-open hook handler and privacy-minimal local Astra observation events.
+- Fail-open hook handler.
+- Privacy-minimal local Astra observations using opaque SHA-256 session/turn correlation keys rather than raw ids.
+- Raw prompt, assistant message, cwd, and transcript paths are not persisted by baseline observation.
 - Non-destructive hook merge/removal primitives with idempotence tests.
-- `cae doctor` and local event inspection.
-- Short-lived local Codex app-server quota client and `cae quota` command, pending real installed-Codex validation.
+- Atomic global hook setup/uninstall honoring upstream `CODEX_HOME` semantics.
+- `cae setup --dry-run`, `cae uninstall --dry-run`, and hook-readiness reporting in `cae doctor`.
+- Exact target compatibility control (`cae target show|set|clear`) for private/runtime validation; public zero-friction setup remains the goal.
+- Short-lived local Codex app-server client.
+- `cae quota` for normalized Plus rate-limit visibility.
+- `cae probe` for read-only quota + native model-catalog reconnaissance.
+- Conservative native Astra discovery that returns `not_found`, `single_candidate`, or `ambiguous` and never silently activates a candidate.
 - Duration-based 300-minute / 10,080-minute normalization without assuming `primary` or `secondary` semantics.
 - First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
 - Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
 - Fixture coverage for complete, missing-5h, missing-weekly, partial, malformed, and contradictory responses.
 - Privacy-minimal local run-receipt primitives with start/end quota snapshots, duration, outcome, optional intervention count, and reset-aware usage deltas.
 - Receipt normalization intentionally excludes raw account IDs from the persisted path.
-- Prior-art authority in `docs/PRIOR_ART.md` documenting adjacent quota/usage/optimization projects and CAE's narrower product boundary.
+- Prior-art authority in `docs/PRIOR_ART.md`.
+- Installed-runtime execution protocol in `docs/NATIVE_RUNTIME_VALIDATION.md`.
+- Updated integration authority in `docs/CODEX_INTEGRATION_RECON.md`.
+
+## Validation status
+
+- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 through the current code path before the latest documentation-only commits.
+- Native installed Codex hook execution: **NOT YET PROVEN**.
+- Signed-in Plus app-server quota read: **NOT YET PROVEN**.
+- Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
+- Native Astra picker/model identity: **BLOCKED UNTIL ASTRA IS AVAILABLE**.
+- Astra efficiency improvement: **BLOCKED UNTIL OBSERVE-ONLY BASELINE EXISTS**.
 
 ## Immediate execution queue
 
-1. Prove native Codex hook execution against a real installed Codex build.
-2. Prove native model-picker selection reaches the hook as the exact active model identifier.
-3. Prove strict non-Astra no-op behavior in that real runtime.
-4. Run `cae quota` against the signed-in Plus account and capture the actual app-server response shape and Codex version.
-5. Verify whether quota reads coexist cleanly with a normal active Codex session.
-6. Add any observed response variants as fixtures; do not weaken unknown/conflict handling.
-7. Validate clean setup/disable/uninstall ownership of actual user configuration.
-8. Bind receipt start/end capture to validated native Astra turn boundaries without adding a new user workflow.
-9. Wait for actual Astra availability before enabling Astra-specific optimization claims.
-10. Run the real-work Plus baseline immediately when Astra becomes available.
+1. Run `docs/NATIVE_RUNTIME_VALIDATION.md` Gates A-F on a real installed, signed-in Codex environment.
+2. Capture exact Codex version and real `cae probe` / `cae quota` behavior.
+3. Prove hook setup/idempotence/uninstall on actual user configuration.
+4. Temporarily target one current exact native model only for plumbing proof, then prove another model is a strict no-op and clear the temporary target.
+5. Verify whether quota/model app-server reads coexist cleanly with a normal active Codex session.
+6. Add every observed response variant as a fixture without weakening unknown/conflict handling.
+7. When Astra appears, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity.
+8. Bind receipt before/after quota capture to the validated Astra turn lifecycle without adding a new user workflow.
+9. Run the real-work Plus observe-only baseline immediately.
+10. Test narrowly scoped efficiency interventions only after baseline review.
 
 ## Research posture
 
-Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the still-distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md`.
+Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md`.
 
 ## Explicitly deferred
 
@@ -83,4 +104,4 @@ Adjacent projects already cover general quota overlays, Codex usage analytics, m
 
 ## Release posture
 
-Public v0.1 should ship as soon as the evidence gate is satisfied after Astra reaches Plus. If the measured optimizations are not yet trustworthy, a clean observability-first release is preferable to unvalidated efficiency claims.
+Public v0.1 should ship as soon as the evidence gate is satisfied after Astra reaches Plus. If measured optimizations are not yet trustworthy, a clean observability-first release is preferable to unvalidated efficiency claims.
