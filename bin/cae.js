@@ -2,8 +2,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { readAccountRateLimits } from "../src/app-server.js";
 import { loadConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
+import { normalizeRateLimitResponse } from "../src/rate-limits.js";
 
 async function readStdin() {
   let data = "";
@@ -50,6 +52,41 @@ async function main() {
     return;
   }
 
+  if (command === "quota") {
+    try {
+      const response = await readAccountRateLimits();
+      const normalized = normalizeRateLimitResponse(response.result);
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            available: true,
+            codex: codexVersion(),
+            source: "codex_app_server",
+            quota: normalized
+          },
+          null,
+          2
+        )}\n`
+      );
+    } catch (error) {
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            available: false,
+            codex: codexVersion(),
+            source: "codex_app_server",
+            error: error.message,
+            meaning: "quota_visibility_unavailable_not_zero"
+          },
+          null,
+          2
+        )}\n`
+      );
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   if (command === "events") {
     const config = loadConfig();
     const file = path.join(config.dir, "events.jsonl");
@@ -62,7 +99,7 @@ async function main() {
   }
 
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae hook   # internal Codex hook handler\n  cae events\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
   );
 }
 
