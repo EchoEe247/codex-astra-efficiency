@@ -23,7 +23,12 @@ test("receipt stores sanitized quota facts and measured deltas", () => {
     id: "run-1",
     model: "gpt-6-astra",
     codexVersion: "codex 1.2.3",
+    plan: "plus",
+    reasoningEffort: "high",
+    serviceTier: "standard",
     taskClass: "cross-system debugging",
+    projectScale: "large",
+    continuity: "continuation",
     rawQuota: quota(10, 20),
     startedAt: "2026-09-04T19:00:00.000Z"
   });
@@ -31,19 +36,39 @@ test("receipt stores sanitized quota facts and measured deltas", () => {
   const completed = completeRunReceipt(started, {
     rawQuota: quota(24, 26),
     outcome: "PASS",
+    requestedObjectiveCompleted: true,
+    validationStatus: "tests-pass",
     humanInterventions: 1,
+    subagentCount: 0,
+    toolClasses: ["shell", "code-edit", "tests", "shell"],
+    scopeExpanded: false,
+    reworkNeeded: false,
+    workDisposition: "implementation",
     endedAt: "2026-09-04T19:30:00.000Z"
   });
 
+  assert.equal(completed.schemaVersion, 2);
   assert.equal(completed.status, "completed");
   assert.equal(completed.durationMs, 30 * 60 * 1000);
+  assert.equal(completed.plan, "plus");
+  assert.equal(completed.reasoningEffort, "high");
+  assert.equal(completed.serviceTier, "standard");
+  assert.equal(completed.projectScale, "large");
+  assert.equal(completed.continuity, "continuation");
+  assert.equal(completed.requestedObjectiveCompleted, true);
+  assert.equal(completed.validationStatus, "tests-pass");
+  assert.equal(completed.subagentCount, 0);
+  assert.deepEqual(completed.toolClasses, ["shell", "code-edit", "tests"]);
+  assert.equal(completed.scopeExpanded, false);
+  assert.equal(completed.reworkNeeded, false);
+  assert.equal(completed.workDisposition, "implementation");
   assert.equal(completed.usageDelta.fiveHour.status, "measured");
   assert.equal(completed.usageDelta.fiveHour.usedPercentDelta, 14);
   assert.equal(completed.usageDelta.weekly.usedPercentDelta, 6);
   assert.equal(JSON.stringify(completed).includes("must-not-persist"), false);
 });
 
-test("receipt preserves unavailable quota instead of inventing burn", () => {
+test("receipt preserves unavailable quota and unknown work evidence instead of guessing", () => {
   const started = startRunReceipt({
     id: "run-2",
     model: "gpt-6-astra",
@@ -51,6 +76,9 @@ test("receipt preserves unavailable quota instead of inventing burn", () => {
   });
   const completed = completeRunReceipt(started, {
     outcome: "FAIL_USEFUL",
+    requestedObjectiveCompleted: "unknown",
+    humanInterventions: -1,
+    subagentCount: 1.5,
     endedAt: "2026-09-04T19:05:00.000Z"
   });
 
@@ -58,6 +86,9 @@ test("receipt preserves unavailable quota instead of inventing burn", () => {
     fiveHour: { status: "unavailable" },
     weekly: { status: "unavailable" }
   });
+  assert.equal(completed.requestedObjectiveCompleted, null);
+  assert.equal(completed.humanInterventions, null);
+  assert.equal(completed.subagentCount, null);
 });
 
 test("appendReceipt writes local JSONL only to the supplied state directory", () => {
