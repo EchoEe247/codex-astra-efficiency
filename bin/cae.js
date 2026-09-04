@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { readAccountRateLimits, readModelList } from "../src/app-server.js";
-import { loadConfig } from "../src/config.js";
+import { loadConfig, parseModelIds, writeConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
 import { summarizeAstraDiscovery } from "../src/model-discovery.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
@@ -90,6 +90,41 @@ async function integrationProbe() {
   };
 }
 
+function targetCommand(args) {
+  const action = args[0] ?? "show";
+  if (action === "show") {
+    const config = loadConfig();
+    return {
+      action: "show",
+      astraModelIds: config.astraModelIds,
+      configured: config.astraModelIds.length > 0,
+      configPath: config.configPath
+    };
+  }
+
+  if (action === "clear") {
+    const config = writeConfig({ astraModelIds: [] });
+    return {
+      action: "clear",
+      astraModelIds: config.astraModelIds,
+      configPath: config.configPath
+    };
+  }
+
+  if (action === "set") {
+    const ids = parseModelIds(args.slice(1));
+    if (ids.length === 0) throw new Error("target set requires at least one exact model id");
+    const config = writeConfig({ astraModelIds: ids });
+    return {
+      action: "set",
+      astraModelIds: config.astraModelIds,
+      configPath: config.configPath
+    };
+  }
+
+  throw new Error(`unsupported target action: ${action}`);
+}
+
 async function main() {
   const command = process.argv[2] ?? "help";
   const flags = new Set(process.argv.slice(3));
@@ -126,6 +161,16 @@ async function main() {
 
   if (command === "probe") {
     process.stdout.write(`${JSON.stringify(await integrationProbe(), null, 2)}\n`);
+    return;
+  }
+
+  if (command === "target") {
+    try {
+      process.stdout.write(`${JSON.stringify(targetCommand(process.argv.slice(3)), null, 2)}\n`);
+    } catch (error) {
+      process.stderr.write(`cae target error: ${error.message}\n`);
+      process.exitCode = 1;
+    }
     return;
   }
 
@@ -190,7 +235,7 @@ async function main() {
   }
 
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae target show|set <exact-model-id>|clear  # validation/compatibility control\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
   );
 }
 
