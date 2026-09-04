@@ -23,8 +23,22 @@ export function initializedNotification() {
   return { method: "initialized" };
 }
 
+export function appServerRequest(id, method, params) {
+  const request = { id, method };
+  if (params !== undefined) request.params = params;
+  return request;
+}
+
 export function rateLimitsRequest(id = 2) {
-  return { id, method: "account/rateLimits/read" };
+  return appServerRequest(id, "account/rateLimits/read");
+}
+
+export function modelListRequest(id = 2, params = {}) {
+  return appServerRequest(id, "model/list", {
+    cursor: params.cursor ?? null,
+    limit: params.limit ?? 100,
+    includeHidden: params.includeHidden ?? false
+  });
 }
 
 function defaultCodexCommand() {
@@ -44,18 +58,13 @@ function safeKill(child) {
   }
 }
 
-/**
- * Read one authoritative account-rate-limit snapshot from a short-lived local
- * Codex app-server process. This does not read browser cookies or copy auth.
- *
- * Runtime compatibility must still be proven against installed Codex builds;
- * callers should treat failures as unavailable visibility, never as zero quota.
- */
-export async function readAccountRateLimits({
+async function requestLocalCodex({
+  method,
+  params,
   codexCommand = defaultCodexCommand(),
   timeoutMs = 8000,
   spawnImpl = spawn
-} = {}) {
+}) {
   const child = spawnImpl(codexCommand, ["app-server", "--listen", "stdio://"], {
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true
@@ -75,10 +84,14 @@ export async function readAccountRateLimits({
 
   const lines = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
   const initId = 1;
-  const quotaId = 2;
+  const requestId = 2;
   let initialized = false;
+  let timedOut = false;
 
-  const timer = setTimeout(() => safeKill(child), timeoutMs);
+  const timer = setTimeout(() => {
+    timedOut = true;
+    safeKill(child);
+  }, timeoutMs);
 
   try {
     writeMessage(child.stdin, initializeRequest(initId));
@@ -100,13 +113,15 @@ export async function readAccountRateLimits({
         if (!Object.prototype.hasOwnProperty.call(message, "result")) continue;
         initialized = true;
         writeMessage(child.stdin, initializedNotification());
-        writeMessage(child.stdin, rateLimitsRequest(quotaId));
+        writeMessage(child.stdin, appServerRequest(requestId, method, params));
         continue;
       }
 
-      if (message?.id === quotaId) {
+      if (message?.id === requestId) {
         if (message.error) {
-          throw new Error(`codex_rate_limits_read_failed:${message.error.message ?? "unknown"}`);
+          throw new Error(
+            `codex_app_server_request_failed:${method}:${message.error.message ?? "unknown"}`
+          );
         }
         if (!Object.prototype.hasOwnProperty.call(message, "result")) continue;
         return {
@@ -117,8 +132,9 @@ export async function readAccountRateLimits({
       }
     }
 
+    if (timedOut) throw new Error(`codex_app_server_timeout:${method}`);
     const suffix = stderr.trim() ? `:${stderr.trim()}` : "";
-    throw new Error(`codex_app_server_closed_before_rate_limits${suffix}`);
+    throw new Error(`codex_app_server_closed_before_response:${method}${suffix}`);
   } finally {
     clearTimeout(timer);
     lines.close();
@@ -129,4 +145,27 @@ export async function readAccountRateLimits({
     }
     safeKill(child);
   }
+}
+
+/**
+ * Read one authoritative account-rate-limit snapshot from a short-lived local
+ * Codex app-server process. This does not read browser cookies or copy auth.
+ *
+ * Runtime compatibility must still be proven against installed Codex builds;
+ * callers should treat failures as unavailable visibility, never as zero quota.
+ */
+export function readAccountRateLimits(options = {}) {
+  return requestLocalCodex({ ...options, method: "account/rateLimits/read" });
+}
+
+/**
+ * Read the native Codex picker catalog. CAE uses this for exact model discovery;
+ * it never guesses an Astra production slug from a display name alone.
+ */
+export function readModelList({ cursor = null, limit = 100, includeHidden = false, ...options } = {}) {
+  return requestLocalCodex({
+    ...options,
+    method: "model/list",
+    params: { cursor, limit, includeHidden }
+  });
 }
