@@ -36,7 +36,7 @@ Current upstream Codex source provides a strong native integration candidate:
 - app-server exposes `account/rateLimits/read`, `model/list`, and rolling limit updates;
 - app-server wire messages are newline-delimited JSON and intentionally omit a JSON-RPC `jsonrpc` field;
 - initialize uses `clientInfo` plus optional capabilities;
-- current rate-limit responses can expose duration, used percent, reset time, plan type, per-limit buckets, ordinary-usage permission, and reset-credit summaries;
+- current rate-limit responses can expose duration, used percent, reset time, plan type, per-limit buckets, ordinary-usage permission, reset-credit summaries, and purchased-credit snapshots (`hasCredits`, `unlimited`, backend balance string);
 - current model catalog exposes exact native model id, display name, hidden/default state, reasoning efforts, and other picker metadata.
 
 These remain source/protocol findings until reproduced against the installed Codex version used for validation.
@@ -57,6 +57,20 @@ These are anecdotal and use different plan denominators. They must not be conver
 
 OpenAI currently states that Astra can consume Work/Codex allowance faster than Sol and that task, input/output size, reasoning setting, and Fast mode affect usage. Current flexible-pricing rate cards also show Astra at a materially higher token rate than Sol. This supports CAE's decision to optimize value density rather than prompt count.
 
+## Measurement authority
+
+`docs/MEASUREMENT_MODEL.md` now defines the evidence hierarchy CAE must use:
+
+1. observed facts;
+2. deterministic derived measurements;
+3. signals;
+4. efficiency hypotheses;
+5. validated interventions.
+
+CAE must not jump from one expensive run or one observed behavior directly to a product claim. The current measurement code deliberately refuses to declare sparse metadata sufficient for an efficiency claim.
+
+The Plus baseline plan now records task shape as well as allowance movement: plan, reasoning effort, Standard/Fast tier, task class, project-scale bucket, fresh/continuation state, context bucket where safely exposed, subagents, coarse tool classes, scope expansion, objective completion, validation status, human interventions, and later rework.
+
 ## Implemented foundation
 
 - Exact configured Astra model targeting with strict non-Astra no-op behavior.
@@ -74,17 +88,21 @@ OpenAI currently states that Astra can consume Work/Codex allowance faster than 
 - Duration-based 300-minute / 10,080-minute normalization without assuming `primary` or `secondary` semantics.
 - First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
 - Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
-- Fixture coverage for complete, missing-5h, missing-weekly, partial, malformed, and contradictory responses.
-- Privacy-minimal local run-receipt primitives with start/end quota snapshots, duration, outcome, optional intervention count, and reset-aware usage deltas.
+- Native purchased-credit snapshot preservation with `not_reported`/`malformed` handling and no invented unit or dollar conversion.
+- Fixture/test coverage for complete, missing-5h, missing-weekly, partial, malformed, contradictory, missing-credit, and malformed-credit states.
+- Privacy-safe run measurement descriptors in `src/measurement.js`.
+- Receipt schema v2 with plan, reasoning effort, service tier, task class, project scale, continuity/context buckets, objective completion, validation status, interventions, subagents, coarse tool classes, scope expansion, rework, and work disposition.
+- Receipt plan defaults to the native quota-reported plan when available rather than trusting a conflicting caller label.
 - Receipt normalization intentionally excludes raw account IDs from the persisted path.
 - Prior-art authority in `docs/PRIOR_ART.md`.
 - Installed-runtime execution protocol in `docs/NATIVE_RUNTIME_VALIDATION.md`.
 - Updated integration authority in `docs/CODEX_INTEGRATION_RECON.md`.
 - Early Pro usage research authority in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
+- Measurement authority in `docs/MEASUREMENT_MODEL.md`.
 
 ## Validation status
 
-- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 and Windows Node 22 through the validated setup path.
+- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 and Windows Node 22 through the latest fully completed validation run before the final receipt-plan test push; the newest push is still subject to its own CI result.
 - Native installed Codex hook execution: **NOT YET PROVEN**.
 - Signed-in Plus app-server quota read: **NOT YET PROVEN**.
 - Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
