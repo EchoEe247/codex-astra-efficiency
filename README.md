@@ -50,11 +50,27 @@ Implemented:
 - 5-hour / weekly normalization by actual window duration;
 - explicit missing, malformed, partial, and conflicting quota states;
 - reset-aware before/after allowance deltas;
-- local Astra run-receipt primitives;
+- native purchased-credit snapshot preservation when Codex reports it, without inventing a unit or dollar conversion;
+- privacy-safe measurement descriptors for task shape and outcome quality;
+- local Astra run-receipt schema v2 with allowance, workload, objective, validation, subagent/tool, intervention, scope, and rework evidence;
 - read-only native-model discovery that never silently activates an Astra candidate;
 - Linux and Windows CI coverage.
 
 The implementation is deliberately **not** an Astra optimizer yet. The next evidence gate is real installed-Codex validation, followed by the first normal Astra real-work baseline when Plus access reaches the test account.
+
+## How CAE measures before it optimizes
+
+CAE separates:
+
+1. observed facts;
+2. deterministic measurements;
+3. signals;
+4. efficiency hypotheses;
+5. validated interventions.
+
+A short run is not automatically efficient, and an expensive run is not automatically wasteful. Early Astra Pro reports already show materially different burn for codebase audits, browser/computer work, and large cross-service tasks, so CAE records task shape and outcome alongside quota movement rather than reducing everything to prompts or minutes.
+
+See [`docs/MEASUREMENT_MODEL.md`](docs/MEASUREMENT_MODEL.md) and [`docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`](docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md).
 
 ## Private validation CLI
 
@@ -91,7 +107,7 @@ The remaining sequence is:
 2. prove native hook setup, exact picker model identity, strict non-target no-op behavior, quota/model reads, coexistence, and clean uninstall;
 3. when Astra is available, prove the exact native Astra model identifier;
 4. run an **observe-only** Astra campaign on needed real work;
-5. measure 5-hour and weekly allowance changes alongside task outcomes and human intervention;
+5. measure 5-hour and weekly allowance changes alongside task shape, completion quality, validation, intervention burden, and later rework;
 6. only then test narrowly scoped Astra-specific efficiency interventions;
 7. ship defaults only when real-work evidence shows they reduce avoidable burn without degrading completion quality.
 
@@ -99,9 +115,9 @@ See [`docs/NATIVE_RUNTIME_VALIDATION.md`](docs/NATIVE_RUNTIME_VALIDATION.md) for
 
 ## Current status
 
-**Foundation complete enough for installed-runtime validation / pre-Astra.**
+**Foundation complete enough for installed-runtime validation / pre-Astra Plus.**
 
-Cross-platform source/unit validation currently passes on Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22. This does **not** yet prove behavior against a real signed-in Codex installation or the production Astra model identity.
+Cross-platform source/unit validation currently passes on Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the measurement/receipt/credit code path. This does **not** yet prove behavior against a real signed-in Codex installation or the production Astra model identity.
 
 The project remains private until those runtime and real-work evidence gates are satisfied.
 
@@ -111,7 +127,10 @@ The project remains private until those runtime and real-work evidence gates are
 - [`docs/CODEX_INTEGRATION_RECON.md`](docs/CODEX_INTEGRATION_RECON.md)
 - [`docs/NATIVE_RUNTIME_VALIDATION.md`](docs/NATIVE_RUNTIME_VALIDATION.md)
 - [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md)
+- [`docs/MEASUREMENT_MODEL.md`](docs/MEASUREMENT_MODEL.md)
+- [`docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`](docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md)
 - [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md)
 - [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)
 - [`trackers/STATE.md`](trackers/STATE.md)
 - [`receipts/pre-runtime-readiness-2026-09-04.md`](receipts/pre-runtime-readiness-2026-09-04.md)
+- [`receipts/measurement-substrate-2026-09-04.md`](receipts/measurement-substrate-2026-09-04.md)
