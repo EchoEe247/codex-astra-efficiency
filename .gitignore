@@ -1,0 +1,11 @@
+node_modules/
+coverage/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+
+# Local CAE observations and experiment data must not be committed by default.
+.cae/
+receipts/local/
