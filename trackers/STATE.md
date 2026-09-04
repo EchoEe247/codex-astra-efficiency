@@ -102,7 +102,7 @@ The Plus baseline plan now records task shape as well as allowance movement: pla
 
 ## Validation status
 
-- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 and Windows Node 22 through the latest fully completed validation run before the final receipt-plan test push; the newest push is still subject to its own CI result.
+- Repository/unit integration: **PASS** on GitHub Actions across Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the current measurement/receipt/credit code path (run #65 on the measurement-state boundary passed; subsequent documentation-only updates do not change that code result).
 - Native installed Codex hook execution: **NOT YET PROVEN**.
 - Signed-in Plus app-server quota read: **NOT YET PROVEN**.
 - Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
