@@ -42,8 +42,10 @@ export function startRunReceipt({
     throw new TypeError("model is required");
   }
 
+  const startQuota = normalizeQuota(rawQuota);
+  const nativePlan = startQuota?.default?.planType ?? null;
   const descriptor = normalizeRunDescriptor({
-    plan,
+    plan: nativePlan ?? plan,
     reasoningEffort,
     serviceTier,
     taskClass,
@@ -71,7 +73,7 @@ export function startRunReceipt({
     scopeExpanded: null,
     reworkNeeded: null,
     workDisposition: null,
-    startQuota: normalizeQuota(rawQuota),
+    startQuota,
     endQuota: null,
     usageDelta: null
   };
