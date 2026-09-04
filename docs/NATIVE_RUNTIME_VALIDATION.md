@@ -53,6 +53,8 @@ Required observations:
 - quota availability is recorded honestly;
 - if quota is present, 300-minute and 10080-minute windows are classified by duration rather than slot name;
 - `planType`, reset timestamps, optional buckets, and reset credits are preserved only when actually reported;
+- if Codex reports a purchased-credit snapshot, CAE preserves `hasCredits`, `unlimited`, and the backend balance string without inventing a unit or dollar conversion;
+- missing purchased-credit state is `not_reported`, not zero;
 - account identifiers/auth material are not written into CAE normalized output.
 
 If one app-server surface is unavailable but Codex otherwise works, record the feature as unavailable and continue only with independent gates. Do not add private web scraping as fallback.
@@ -171,9 +173,26 @@ Only after Gate G passes may Astra observations be treated as real CAE baseline 
 
 ## Gate H — observe-only real-work baseline
 
-Follow `docs/ASTRA_PLUS_TEST_PLAN.md`.
+Follow `docs/ASTRA_PLUS_TEST_PLAN.md` and `docs/MEASUREMENT_MODEL.md`.
 
-Do not add efficiency instructions yet. Use Astra exactly as a normal Plus user would use it for needed work. Record before/after 5-hour and weekly snapshots when available, wall time, outcome, and human intervention count. Preserve failures.
+Do not add efficiency instructions yet. Use Astra exactly as a normal Plus user would use it for needed work.
+
+At minimum, preserve before/after 5-hour and weekly snapshots when available, wall time, and outcome. Where the native surface or deliberate test campaign can record them without collecting project content, also preserve:
+
+- reasoning effort and Standard/Fast service tier;
+- task class and project-scale bucket;
+- fresh task vs continuation state;
+- context bucket if safely exposed;
+- subagent count;
+- coarse tool classes;
+- objective completion;
+- validation status;
+- human intervention count;
+- material scope expansion;
+- later rework;
+- purchased-credit state when natively reported.
+
+Preserve failures. Do not infer missing evidence and do not generate an efficiency score during the observe-only campaign.
 
 ## Evidence handling
 
