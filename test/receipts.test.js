@@ -23,7 +23,6 @@ test("receipt stores sanitized quota facts and measured deltas", () => {
     id: "run-1",
     model: "gpt-6-astra",
     codexVersion: "codex 1.2.3",
-    plan: "plus",
     reasoningEffort: "high",
     serviceTier: "standard",
     taskClass: "cross-system debugging",
@@ -66,6 +65,18 @@ test("receipt stores sanitized quota facts and measured deltas", () => {
   assert.equal(completed.usageDelta.fiveHour.usedPercentDelta, 14);
   assert.equal(completed.usageDelta.weekly.usedPercentDelta, 6);
   assert.equal(JSON.stringify(completed).includes("must-not-persist"), false);
+});
+
+test("native quota plan overrides a conflicting provided label", () => {
+  const started = startRunReceipt({
+    id: "run-native-plan",
+    model: "gpt-6-astra",
+    plan: "pro",
+    rawQuota: quota(1, 2),
+    startedAt: "2026-09-04T19:00:00.000Z"
+  });
+
+  assert.equal(started.plan, "plus");
 });
 
 test("receipt preserves unavailable quota and unknown work evidence instead of guessing", () => {
