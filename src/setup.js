@@ -26,10 +26,10 @@ function stableJson(value) {
 function readExistingHooks(file) {
   try {
     const raw = fs.readFileSync(file, "utf8");
-    return { exists: true, raw, parsed: parseHooksConfig(raw) };
+    return { exists: true, parsed: parseHooksConfig(raw) };
   } catch (error) {
     if (error?.code === "ENOENT") {
-      return { exists: false, raw: "", parsed: {} };
+      return { exists: false, parsed: {} };
     }
     throw error;
   }
@@ -65,13 +65,6 @@ function existingMode(file, exists) {
   return fs.statSync(file).mode & 0o777;
 }
 
-function meaningfulConfigKeys(config) {
-  return Object.keys(config).filter((key) => {
-    if (key !== "hooks") return true;
-    return config.hooks && Object.keys(config.hooks).length > 0;
-  });
-}
-
 export function planHookSetup({
   action = "install",
   env = process.env,
@@ -95,35 +88,30 @@ export function planHookSetup({
     hooksFile: file,
     fileExists: current.exists,
     changed: !deepEqualJson(current.parsed, next),
-    removeEmptyCaeCreatedFile:
-      action === "uninstall" &&
-      current.exists &&
-      meaningfulConfigKeys(next).length === 0 &&
-      meaningfulConfigKeys(current.parsed).length === 1,
     current: current.parsed,
     next
   };
 }
 
 export function applyHookSetup(options = {}) {
-  const plan = planHookSetup(options);
+  const env = options.env ?? process.env;
+  const plan = planHookSetup({ ...options, env });
   if (!plan.changed) return { ...plan, applied: false };
 
   if (options.dryRun) return { ...plan, applied: false, dryRun: true };
 
   if (plan.action === "install") {
-    const codexHome = plan.codexHome;
-    if (options.env?.CODEX_HOME || process.env.CODEX_HOME) {
-      if (!fs.existsSync(codexHome) || !fs.statSync(codexHome).isDirectory()) {
-        throw new Error(`CODEX_HOME must already exist and be a directory: ${codexHome}`);
-      }
+    const configuredHome = typeof env.CODEX_HOME === "string" && env.CODEX_HOME.trim().length > 0;
+    if (
+      configuredHome &&
+      (!fs.existsSync(plan.codexHome) || !fs.statSync(plan.codexHome).isDirectory())
+    ) {
+      throw new Error(`CODEX_HOME must already exist and be a directory: ${plan.codexHome}`);
     }
-    atomicWriteJson(plan.hooksFile, plan.next, existingMode(plan.hooksFile, plan.fileExists));
-    return { ...plan, applied: true };
   }
 
-  // Uninstall only removes CAE-owned handlers. Keep the file even if that leaves
-  // an empty hooks object; deleting a pre-existing user file would exceed CAE ownership.
+  // Only the parsed CAE handlers are added or removed. A pre-existing hooks file
+  // is never deleted, and malformed user structures are rejected before writes.
   atomicWriteJson(plan.hooksFile, plan.next, existingMode(plan.hooksFile, plan.fileExists));
   return { ...plan, applied: true };
 }
