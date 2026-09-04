@@ -3,6 +3,7 @@ import readline from "node:readline";
 
 export const APP_SERVER_CLIENT_NAME = "codex-astra-efficiency";
 export const APP_SERVER_CLIENT_VERSION = "0.0.0-dev";
+export const CODEX_COMMAND_ENV = "CAE_CODEX_COMMAND";
 
 export function initializeRequest(id = 1) {
   return {
@@ -41,8 +42,17 @@ export function modelListRequest(id = 2, params = {}) {
   });
 }
 
-function defaultCodexCommand() {
-  return process.platform === "win32" ? "codex.cmd" : "codex";
+export function resolveCodexCommand({
+  codexCommand = null,
+  env = process.env,
+  platform = process.platform
+} = {}) {
+  if (typeof codexCommand === "string" && codexCommand.trim()) return codexCommand.trim();
+
+  const configured = env?.[CODEX_COMMAND_ENV];
+  if (typeof configured === "string" && configured.trim()) return configured.trim();
+
+  return platform === "win32" ? "codex.cmd" : "codex";
 }
 
 function writeMessage(stream, message) {
@@ -61,11 +71,14 @@ function safeKill(child) {
 async function requestLocalCodex({
   method,
   params,
-  codexCommand = defaultCodexCommand(),
+  codexCommand = null,
+  env = process.env,
+  platform = process.platform,
   timeoutMs = 8000,
   spawnImpl = spawn
 }) {
-  const child = spawnImpl(codexCommand, ["app-server", "--listen", "stdio://"], {
+  const command = resolveCodexCommand({ codexCommand, env, platform });
+  const child = spawnImpl(command, ["app-server", "--listen", "stdio://"], {
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true
   });
@@ -127,6 +140,7 @@ async function requestLocalCodex({
         return {
           result: message.result,
           initialized,
+          command,
           stderr: stderr.trim() || null
         };
       }
@@ -150,6 +164,11 @@ async function requestLocalCodex({
 /**
  * Read one authoritative account-rate-limit snapshot from a short-lived local
  * Codex app-server process. This does not read browser cookies or copy auth.
+ *
+ * `CAE_CODEX_COMMAND` can point CAE at the same executable/wrapper the user
+ * normally launches. This is useful on platforms where the wrapper provides
+ * required environment setup that a direct underlying binary invocation lacks.
+ * The value is treated as one executable path/name, not as a shell command.
  *
  * Runtime compatibility must still be proven against installed Codex builds;
  * callers should treat failures as unavailable visibility, never as zero quota.
