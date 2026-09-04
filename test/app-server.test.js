@@ -4,11 +4,13 @@ import test from "node:test";
 import {
   initializeRequest,
   initializedNotification,
+  modelListRequest,
   rateLimitsRequest,
-  readAccountRateLimits
+  readAccountRateLimits,
+  readModelList
 } from "../src/app-server.js";
 
-function fakeSpawnWithQuota(result) {
+function fakeSpawnWithResults(resultsByMethod) {
   return (_command, args) => {
     assert.deepEqual(args, ["app-server", "--listen", "stdio://"]);
 
@@ -39,10 +41,14 @@ function fakeSpawnWithQuota(result) {
           queueMicrotask(() => {
             stdout.write(`${JSON.stringify({ id: message.id, result: { userAgent: "test" } })}\n`);
           });
+          continue;
         }
-        if (message.method === "account/rateLimits/read") {
+
+        if (Object.hasOwn(resultsByMethod, message.method)) {
           queueMicrotask(() => {
-            stdout.write(`${JSON.stringify({ id: message.id, result })}\n`);
+            stdout.write(
+              `${JSON.stringify({ id: message.id, result: resultsByMethod[message.method] })}\n`
+            );
           });
         }
       }
@@ -67,6 +73,11 @@ test("builds the current Codex initialize handshake without a jsonrpc field", ()
   });
   assert.deepEqual(initializedNotification(), { method: "initialized" });
   assert.deepEqual(rateLimitsRequest(8), { id: 8, method: "account/rateLimits/read" });
+  assert.deepEqual(modelListRequest(9), {
+    id: 9,
+    method: "model/list",
+    params: { cursor: null, limit: 100, includeHidden: false }
+  });
 });
 
 test("performs initialize then reads one account rate-limit snapshot", async () => {
@@ -80,11 +91,41 @@ test("performs initialize then reads one account rate-limit snapshot", async () 
 
   const response = await readAccountRateLimits({
     codexCommand: "fake-codex",
-    spawnImpl: fakeSpawnWithQuota(quota),
+    spawnImpl: fakeSpawnWithResults({ "account/rateLimits/read": quota }),
     timeoutMs: 1000
   });
 
   assert.equal(response.initialized, true);
   assert.deepEqual(response.result, quota);
   assert.equal(response.stderr, null);
+});
+
+test("reads the same native model catalog that backs Codex picker discovery", async () => {
+  const catalog = {
+    data: [
+      {
+        id: "model-entry-1",
+        model: "gpt-6-astra",
+        displayName: "GPT-6 Astra",
+        description: "test fixture",
+        hidden: false,
+        isDefault: false,
+        defaultReasoningEffort: "medium",
+        supportedReasoningEfforts: [
+          { reasoningEffort: "medium", description: "balanced" },
+          { reasoningEffort: "high", description: "deep" }
+        ]
+      }
+    ],
+    nextCursor: null
+  };
+
+  const response = await readModelList({
+    codexCommand: "fake-codex",
+    spawnImpl: fakeSpawnWithResults({ "model/list": catalog }),
+    timeoutMs: 1000
+  });
+
+  assert.equal(response.initialized, true);
+  assert.deepEqual(response.result, catalog);
 });
