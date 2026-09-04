@@ -12,7 +12,7 @@ function fixture(name) {
   return JSON.parse(fs.readFileSync(url, "utf8"));
 }
 
-test("normalizes complete Plus 5-hour and weekly windows by duration", () => {
+test("normalizes complete Plus 5-hour, weekly, and credit state by native metadata", () => {
   const normalized = normalizeRateLimitResponse(fixture("complete"));
 
   assert.equal(normalized.status, "reported");
@@ -22,9 +22,16 @@ test("normalizes complete Plus 5-hour and weekly windows by duration", () => {
   assert.equal(normalized.default.fiveHour.remainingPercent, 82);
   assert.equal(normalized.default.weekly.status, "reported");
   assert.equal(normalized.default.weekly.usedPercent, 37);
+  assert.deepEqual(normalized.default.credits, {
+    status: "reported",
+    hasCredits: true,
+    unlimited: false,
+    balance: "38"
+  });
   assert.equal(normalized.resetCreditsAvailable, 2);
   assert.equal(normalized.ordinaryUsageAllowed, true);
   assert.equal(normalized.buckets.codex.fiveHour.usedPercent, 18);
+  assert.equal(normalized.buckets.codex.credits.balance, "38");
 });
 
 test("does not invent a missing 5-hour window", () => {
