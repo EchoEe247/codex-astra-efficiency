@@ -6,6 +6,7 @@ import { readAccountRateLimits } from "../src/app-server.js";
 import { loadConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
+import { applyHookSetup } from "../src/setup.js";
 
 async function readStdin() {
   let data = "";
@@ -20,8 +21,19 @@ function codexVersion() {
   return (result.stdout || result.stderr || "").trim() || null;
 }
 
+function setupSummary(result) {
+  return {
+    action: result.action,
+    hooksFile: result.hooksFile,
+    changed: result.changed,
+    applied: result.applied,
+    dryRun: Boolean(result.dryRun)
+  };
+}
+
 async function main() {
   const command = process.argv[2] ?? "help";
+  const flags = new Set(process.argv.slice(3));
 
   if (command === "hook") {
     try {
@@ -49,6 +61,20 @@ async function main() {
       astraModelIds: config.astraModelIds
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+
+  if (command === "setup" || command === "uninstall") {
+    try {
+      const result = applyHookSetup({
+        action: command === "setup" ? "install" : "uninstall",
+        dryRun: flags.has("--dry-run")
+      });
+      process.stdout.write(`${JSON.stringify(setupSummary(result), null, 2)}\n`);
+    } catch (error) {
+      process.stderr.write(`cae ${command} error: ${error.message}\n`);
+      process.exitCode = 1;
+    }
     return;
   }
 
@@ -99,7 +125,7 @@ async function main() {
   }
 
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
   );
 }
 
