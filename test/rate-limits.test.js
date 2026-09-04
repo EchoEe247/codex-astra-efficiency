@@ -3,13 +3,37 @@ import fs from "node:fs";
 import test from "node:test";
 import {
   calculateDefaultUsageDelta,
+  calculateModelUsageDelta,
   calculateWindowDelta,
-  normalizeRateLimitResponse
+  normalizeRateLimitResponse,
+  selectUsageAuthority
 } from "../src/rate-limits.js";
 
 function fixture(name) {
   const url = new URL(`./fixtures/rate-limits/${name}.json`, import.meta.url);
   return JSON.parse(fs.readFileSync(url, "utf8"));
+}
+
+function modelSpecificPayload(astra5h, astraWeekly, shared5h = 50, sharedWeekly = 60) {
+  return {
+    ordinaryUsageAllowed: true,
+    rateLimits: {
+      limitId: "codex",
+      planType: "plus",
+      primary: { usedPercent: shared5h, windowDurationMins: 300, resetsAt: 1000 },
+      secondary: { usedPercent: sharedWeekly, windowDurationMins: 10080, resetsAt: 2000 }
+    },
+    rateLimitsByLimitId: {
+      astra_meter: {
+        limitId: "astra_meter",
+        limitName: "astra",
+        normalModelSlug: "gpt-6-astra",
+        planType: "plus",
+        primary: { usedPercent: astra5h, windowDurationMins: 300, resetsAt: 1000 },
+        secondary: { usedPercent: astraWeekly, windowDurationMins: 10080, resetsAt: 2000 }
+      }
+    }
+  };
 }
 
 test("normalizes complete Plus 5-hour, weekly, and credit state by native metadata", () => {
@@ -122,6 +146,55 @@ test("calculates measured usage deltas only within a stable window", () => {
       endUsedPercent: 40
     }
   });
+});
+
+test("uses shared default allowance when no exact model bucket is reported", () => {
+  const normalized = normalizeRateLimitResponse(fixture("complete"));
+  const authority = selectUsageAuthority(normalized, "gpt-6-astra");
+
+  assert.equal(authority.status, "selected");
+  assert.equal(authority.kind, "shared_default");
+  assert.equal(authority.key, "default");
+});
+
+test("prefers an exact native model bucket over shared default allowance", () => {
+  const start = normalizeRateLimitResponse(modelSpecificPayload(10, 20, 70, 80));
+  const end = normalizeRateLimitResponse(modelSpecificPayload(17, 24, 95, 99));
+
+  const delta = calculateModelUsageDelta(start, end, "gpt-6-astra");
+  assert.deepEqual(delta.authority, {
+    status: "stable",
+    kind: "model_bucket",
+    key: "astra_meter",
+    limitId: "astra_meter",
+    normalModelSlug: "gpt-6-astra"
+  });
+  assert.equal(delta.fiveHour.usedPercentDelta, 7);
+  assert.equal(delta.weekly.usedPercentDelta, 4);
+});
+
+test("refuses to guess when multiple model-specific quota buckets match Astra", () => {
+  const payload = modelSpecificPayload(10, 20);
+  payload.rateLimitsByLimitId.astra_meter_2 = {
+    ...payload.rateLimitsByLimitId.astra_meter,
+    limitId: "astra_meter_2"
+  };
+  const normalized = normalizeRateLimitResponse(payload);
+
+  const authority = selectUsageAuthority(normalized, "gpt-6-astra");
+  assert.equal(authority.status, "ambiguous");
+  assert.deepEqual(authority.candidateKeys, ["astra_meter", "astra_meter_2"]);
+});
+
+test("does not use a default quota snapshot explicitly assigned to another model", () => {
+  const payload = fixture("complete");
+  payload.rateLimits.normalModelSlug = "gpt-5.6-sol";
+  payload.rateLimitsByLimitId = {};
+  const normalized = normalizeRateLimitResponse(payload);
+
+  const authority = selectUsageAuthority(normalized, "gpt-6-astra");
+  assert.equal(authority.status, "unavailable");
+  assert.equal(authority.reason, "default_targets_other_model");
 });
 
 test("does not call a reset-crossing change usage burn", () => {
