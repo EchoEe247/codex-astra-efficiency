@@ -18,7 +18,7 @@ function quota(used5h, usedWeekly, resets5h = 1000, resetsWeekly = 2000) {
   };
 }
 
-test("receipt stores sanitized quota facts and measured deltas", () => {
+test("receipt stores sanitized quota facts and measured model-aware deltas", () => {
   const started = startRunReceipt({
     id: "run-1",
     model: "gpt-6-astra",
@@ -61,6 +61,13 @@ test("receipt stores sanitized quota facts and measured deltas", () => {
   assert.equal(completed.scopeExpanded, false);
   assert.equal(completed.reworkNeeded, false);
   assert.equal(completed.workDisposition, "implementation");
+  assert.deepEqual(completed.usageDelta.authority, {
+    status: "stable",
+    kind: "shared_default",
+    key: "default",
+    limitId: "codex",
+    normalModelSlug: null
+  });
   assert.equal(completed.usageDelta.fiveHour.status, "measured");
   assert.equal(completed.usageDelta.fiveHour.usedPercentDelta, 14);
   assert.equal(completed.usageDelta.weekly.usedPercentDelta, 6);
@@ -94,6 +101,7 @@ test("receipt preserves unavailable quota and unknown work evidence instead of g
   });
 
   assert.deepEqual(completed.usageDelta, {
+    authority: { status: "unavailable_authority" },
     fiveHour: { status: "unavailable" },
     weekly: { status: "unavailable" }
   });
