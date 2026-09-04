@@ -34,6 +34,26 @@ test("normalizes complete Plus 5-hour, weekly, and credit state by native metada
   assert.equal(normalized.buckets.codex.credits.balance, "38");
 });
 
+test("missing purchased-credit state remains not_reported", () => {
+  const normalized = normalizeRateLimitResponse(fixture("missing-five-hour"));
+  assert.deepEqual(normalized.default.credits, { status: "not_reported" });
+});
+
+test("malformed purchased-credit state is surfaced rather than coerced", () => {
+  const payload = fixture("complete");
+  payload.rateLimits.credits = {
+    hasCredits: true,
+    unlimited: false,
+    balance: 38
+  };
+
+  const normalized = normalizeRateLimitResponse(payload);
+  assert.deepEqual(normalized.default.credits, {
+    status: "malformed",
+    reason: "invalid_credit_balance"
+  });
+});
+
 test("does not invent a missing 5-hour window", () => {
   const normalized = normalizeRateLimitResponse(fixture("missing-five-hour"));
 
