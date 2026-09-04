@@ -29,7 +29,7 @@ Before Astra is available to the test Plus account:
 
 - validate Codex integration and model detection;
 - validate rate-limit snapshot reading against the currently installed Codex version;
-- create fixtures for full, partial, missing, and contradictory rate-limit windows;
+- create fixtures for full, partial, missing, contradictory, shared-default, and model-specific rate-limit states;
 - validate local receipt storage;
 - ensure CAE remains inert when a non-Astra model is active;
 - establish clean install, disable, and uninstall procedures;
@@ -70,6 +70,7 @@ For each real Astra task, record where reliably available:
 
 ### Allowance state
 
+- selected quota authority: exact model bucket or shared default;
 - starting 5-hour usage snapshot, if available;
 - ending 5-hour usage snapshot, if available;
 - starting weekly usage snapshot, if available;
@@ -146,7 +147,7 @@ Candidate default requirement:
 
 > lower or more predictable avoidable burn with comparable or better task completion, validation quality, and user intervention burden.
 
-## Usage-window handling
+## Usage-window and quota-authority handling
 
 CAE must treat 5-hour and weekly limits as independent observations.
 
@@ -161,6 +162,10 @@ If a window is unavailable from Codex:
 If the two windows disagree about whether new work is possible, the receipt should record the disagreement rather than inventing a single authoritative state.
 
 If purchased credits are exposed by the same native rate-limit source, record the backend-provided balance as an observation. Do not assume its unit or convert it to dollars unless Codex explicitly provides that meaning.
+
+If Codex exposes exactly one rate-limit bucket whose `normalModelSlug` matches the active Astra model id, that bucket is preferred for Astra allowance deltas. If no such bucket exists and the default snapshot has no model slug, CAE may use it as a **shared-default** authority and must label it as such. Multiple exact matches are ambiguous; a default assigned to a different model is not an Astra authority.
+
+When the authority is shared-default, controlled baseline runs should avoid simultaneous Codex work on the same account where practical. Otherwise unrelated activity can contaminate the measured delta. CAE should record that limitation rather than pretending a shared meter is model-exclusive.
 
 ## First-window operating rule
 
@@ -191,15 +196,17 @@ A local receipt should be able to express at least:
   "continuity": null,
   "startedAt": "...",
   "endedAt": "...",
-  "fiveHour": {
-    "startUsedPercent": null,
-    "endUsedPercent": null,
-    "status": "not_reported"
-  },
-  "weekly": {
-    "startUsedPercent": null,
-    "endUsedPercent": null,
-    "status": "not_reported"
+  "usageDelta": {
+    "authority": {
+      "status": "stable",
+      "kind": "shared_default"
+    },
+    "fiveHour": {
+      "status": "not_reported"
+    },
+    "weekly": {
+      "status": "not_reported"
+    }
   },
   "outcome": "PASS",
   "requestedObjectiveCompleted": true,
