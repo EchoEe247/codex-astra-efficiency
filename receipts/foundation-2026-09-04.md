@@ -16,6 +16,7 @@
 - Astra exact-target filtering primitives;
 - fail-open hook handler;
 - privacy-minimal local observation schema;
+- non-destructive Codex hooks merge/removal logic;
 - initial `cae doctor`, internal `cae hook`, and `cae events` commands;
 - Node 20/22 GitHub Actions workflow.
 
@@ -37,21 +38,30 @@ These are source-level findings, not proof that every installed Codex release ex
 
 ## Local scaffold validation
 
-The initial scaffold was reproduced in a clean local working directory and tested with Node 22.16.0.
+The current scaffold was reproduced in a clean local working directory and tested with Node 22.16.0.
 
 Results:
 
-- `npm test`: **6/6 PASS**
+- `npm test`: **11/11 PASS**
 - `npm run check`: **PASS**
 
-Covered assertions:
+Covered assertions include:
 
 1. Astra target IDs are exact and case-insensitive.
 2. An unconfigured Astra target never activates.
 3. Non-Astra model input is a strict no-op.
 4. Astra observation excludes raw cwd and transcript paths.
 5. Non-Astra turns do not create local observation files.
-6. Targeted Astra events create one local JSONL observation.
+6. Targeted Astra events create local JSONL observation.
+7. CAE hook installation preserves unrelated existing hooks.
+8. Hook installation is idempotent.
+9. Uninstall removes only CAE-owned handlers and preserves mixed groups.
+10. Malformed existing hook structures are rejected instead of overwritten.
+11. Empty hooks content is normalized safely.
+
+## GitHub CI
+
+GitHub Actions run `33907786709` for commit `a33ad6b0c0d766d28e267036f7ab42c478a585e1` completed successfully on the Node 20/22 matrix.
 
 ## Safety behavior in scaffold
 
@@ -60,6 +70,7 @@ Covered assertions:
 - Astra target IDs are configuration-driven; the code does not guess the final production Astra model slug.
 - Default observation metadata does not store raw cwd, transcript path, prompt, or code.
 - No optimization context is injected in baseline mode.
+- Hook installation code is non-destructive and refuses malformed structures instead of replacing them.
 
 ## Not yet proven
 
@@ -67,10 +78,9 @@ Covered assertions:
 - native model-picker Astra selection reaches the hook with the expected model ID;
 - exact Astra production model slug(s);
 - authoritative Plus 5-hour/weekly rate-limit acquisition in a normal active Codex session;
-- setup/uninstall merge behavior with an existing user `hooks.json`;
+- real setup/uninstall behavior against a live existing user `hooks.json`;
 - Astra-specific efficiency improvement;
-- public-package install experience;
-- GitHub Actions result for the newly added workflow.
+- public-package install experience.
 
 ## Next gate
 
