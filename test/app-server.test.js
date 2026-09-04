@@ -36,10 +36,14 @@ function fakeSpawnWithQuota(result) {
         if (!line.trim()) continue;
         const message = JSON.parse(line);
         if (message.method === "initialize" && Object.hasOwn(message, "id")) {
-          stdout.write(`${JSON.stringify({ id: message.id, result: { userAgent: "test" } })}\n`);
+          queueMicrotask(() => {
+            stdout.write(`${JSON.stringify({ id: message.id, result: { userAgent: "test" } })}\n`);
+          });
         }
         if (message.method === "account/rateLimits/read") {
-          stdout.write(`${JSON.stringify({ id: message.id, result })}\n`);
+          queueMicrotask(() => {
+            stdout.write(`${JSON.stringify({ id: message.id, result })}\n`);
+          });
         }
       }
     });
