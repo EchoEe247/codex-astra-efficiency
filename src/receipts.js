@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { normalizeCompletionEvidence, normalizeRunDescriptor } from "./measurement.js";
-import { calculateDefaultUsageDelta, normalizeRateLimitResponse } from "./rate-limits.js";
+import { calculateModelUsageDelta, normalizeRateLimitResponse } from "./rate-limits.js";
 
 export const RECEIPT_SCHEMA_VERSION = 2;
 export const RECEIPT_OUTCOMES = Object.freeze([
@@ -22,6 +22,14 @@ function isoTimestamp(value = new Date()) {
 function normalizeQuota(rawQuota) {
   if (rawQuota === null || rawQuota === undefined) return null;
   return normalizeRateLimitResponse(rawQuota);
+}
+
+function unavailableUsageDelta() {
+  return {
+    authority: { status: "unavailable_authority" },
+    fiveHour: { status: "unavailable" },
+    weekly: { status: "unavailable" }
+  };
 }
 
 export function startRunReceipt({
@@ -121,11 +129,8 @@ export function completeRunReceipt(
   const endQuota = normalizeQuota(rawQuota);
   const usageDelta =
     receipt.startQuota && endQuota
-      ? calculateDefaultUsageDelta(receipt.startQuota, endQuota)
-      : {
-          fiveHour: { status: "unavailable" },
-          weekly: { status: "unavailable" }
-        };
+      ? calculateModelUsageDelta(receipt.startQuota, endQuota, receipt.model)
+      : unavailableUsageDelta();
 
   return {
     ...receipt,
