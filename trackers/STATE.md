@@ -32,22 +32,41 @@ Current upstream Codex source provides a promising native integration path:
 - current hook schemas expose the active `model` on those turn-scoped events;
 - `UserPromptSubmit` can optionally return additional context;
 - Codex app-server exposes `account/rateLimits/read` and rolling limit updates;
-- app-server exposes turn completion/token information.
+- the app-server wire protocol is newline-delimited JSON objects and intentionally omits the JSON-RPC `jsonrpc` field;
+- current initialize parameters use `clientInfo` plus optional capabilities;
+- current rate-limit responses expose window duration, used percent, reset time, plan type, multi-bucket data, ordinary-usage permission, and optional reset-credit summaries.
 
-These findings are source-level reconnaissance only until reproduced against an installed Codex release.
+These upstream findings are source-level reconnaissance until reproduced against an installed Codex release.
+
+## Implemented foundation
+
+- Exact configured Astra model targeting with strict non-Astra no-op behavior.
+- Fail-open hook handler and privacy-minimal local Astra observation events.
+- Non-destructive hook merge/removal primitives with idempotence tests.
+- `cae doctor` and local event inspection.
+- Short-lived local Codex app-server quota client and `cae quota` command, pending real installed-Codex validation.
+- Duration-based 300-minute / 10,080-minute normalization without assuming `primary` or `secondary` semantics.
+- First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
+- Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
+- Fixture coverage for complete, missing-5h, missing-weekly, partial, malformed, and contradictory responses.
+- Prior-art authority in `docs/PRIOR_ART.md` documenting adjacent quota/usage/optimization projects and CAE's narrower product boundary.
 
 ## Immediate execution queue
 
-1. Build a minimal safe Codex hook proof.
-2. Prove native model-picker selection reaches the hook as a model identifier.
-3. Prove strict non-Astra no-op behavior.
-4. Validate clean setup/uninstall ownership of configuration.
-5. Prove authoritative Plus rate-limit snapshot access without browser-cookie scraping or auth changes.
-6. Define fixture-backed rate-limit normalization.
-7. Build local receipt storage.
-8. Create `cae doctor` around the validated integration surface.
+1. Prove native Codex hook execution against a real installed Codex build.
+2. Prove native model-picker selection reaches the hook as the exact active model identifier.
+3. Prove strict non-Astra no-op behavior in that real runtime.
+4. Run `cae quota` against the signed-in Plus account and capture the actual app-server response shape and Codex version.
+5. Verify whether quota reads coexist cleanly with a normal active Codex session.
+6. Add any observed response variants as fixtures; do not weaken unknown/conflict handling.
+7. Validate clean setup/disable/uninstall ownership of actual user configuration.
+8. Build durable local run-receipt storage around validated before/after snapshots.
 9. Wait for actual Astra availability before enabling Astra-specific optimization claims.
 10. Run the real-work Plus baseline immediately when Astra becomes available.
+
+## Research posture
+
+Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the still-distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md`.
 
 ## Explicitly deferred
 
