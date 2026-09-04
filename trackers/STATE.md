@@ -20,7 +20,7 @@ The repository remains private while the native Codex path is proven against a r
 - Core v0.x does not silently route Astra work to cheaper models.
 - Efficiency means reducing avoidable Astra burn while preserving useful real work.
 - Observe-only baseline precedes optimization.
-- 5-hour and weekly windows are separate authorities when exposed.
+- 5-hour and weekly limits are separate authorities when exposed.
 - Missing rate-limit data is unknown, never guessed.
 - Local-first privacy is mandatory.
 
@@ -37,6 +37,7 @@ Current upstream Codex source provides a strong native integration candidate:
 - app-server wire messages are newline-delimited JSON and intentionally omit a JSON-RPC `jsonrpc` field;
 - initialize uses `clientInfo` plus optional capabilities;
 - current rate-limit responses can expose duration, used percent, reset time, plan type, per-limit buckets, ordinary-usage permission, reset-credit summaries, and purchased-credit snapshots (`hasCredits`, `unlimited`, backend balance string);
+- current `rateLimitsByLimitId` buckets may expose `normalModelSlug`, which can identify the normal model associated with a quota alias;
 - current model catalog exposes exact native model id, display name, hidden/default state, reasoning efforts, and other picker metadata.
 
 These remain source/protocol findings until reproduced against the installed Codex version used for validation.
@@ -59,7 +60,7 @@ OpenAI currently states that Astra can consume Work/Codex allowance faster than 
 
 ## Measurement authority
 
-`docs/MEASUREMENT_MODEL.md` now defines the evidence hierarchy CAE must use:
+`docs/MEASUREMENT_MODEL.md` defines the evidence hierarchy CAE must use:
 
 1. observed facts;
 2. deterministic derived measurements;
@@ -69,7 +70,9 @@ OpenAI currently states that Astra can consume Work/Codex allowance faster than 
 
 CAE must not jump from one expensive run or one observed behavior directly to a product claim. The current measurement code deliberately refuses to declare sparse metadata sufficient for an efficiency claim.
 
-The Plus baseline plan now records task shape as well as allowance movement: plan, reasoning effort, Standard/Fast tier, task class, project-scale bucket, fresh/continuation state, context bucket where safely exposed, subagents, coarse tool classes, scope expansion, objective completion, validation status, human interventions, and later rework.
+The Plus baseline plan records task shape as well as allowance movement: plan, reasoning effort, Standard/Fast tier, task class, project-scale bucket, fresh/continuation state, context bucket where safely exposed, subagents, coarse tool classes, scope expansion, objective completion, validation status, human interventions, and later rework.
+
+Quota measurement is now model-aware: CAE prefers exactly one `rateLimitsByLimitId` bucket whose `normalModelSlug` matches the active model, otherwise it can use an unlabeled default only as a clearly marked `shared_default`. Multiple exact matches are ambiguous; a default explicitly assigned to another model is rejected. Start/end authorities must remain stable before a percentage change is called usage burn.
 
 ## Implemented foundation
 
@@ -89,9 +92,11 @@ The Plus baseline plan now records task shape as well as allowance movement: pla
 - First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
 - Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
 - Native purchased-credit snapshot preservation with `not_reported`/`malformed` handling and no invented unit or dollar conversion.
-- Fixture/test coverage for complete, missing-5h, missing-weekly, partial, malformed, contradictory, missing-credit, and malformed-credit states.
+- Model-aware quota authority selection with `model_bucket`, `model_default`, `shared_default`, ambiguous, unavailable, and authority-change handling.
+- Fixture/test coverage for complete, missing-5h, missing-weekly, partial, malformed, contradictory, missing-credit, malformed-credit, shared-default, exact-model-bucket, ambiguous-model-bucket, and wrong-model-default states.
 - Privacy-safe run measurement descriptors in `src/measurement.js`.
 - Receipt schema v2 with plan, reasoning effort, service tier, task class, project scale, continuity/context buckets, objective completion, validation status, interventions, subagents, coarse tool classes, scope expansion, rework, and work disposition.
+- Receipts persist the quota authority used for 5-hour/weekly deltas instead of silently assuming the default meter belongs to Astra.
 - Receipt plan defaults to the native quota-reported plan when available rather than trusting a conflicting caller label.
 - Receipt normalization intentionally excludes raw account IDs from the persisted path.
 - Prior-art authority in `docs/PRIOR_ART.md`.
@@ -99,14 +104,16 @@ The Plus baseline plan now records task shape as well as allowance movement: pla
 - Updated integration authority in `docs/CODEX_INTEGRATION_RECON.md`.
 - Early Pro usage research authority in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
 - Measurement authority in `docs/MEASUREMENT_MODEL.md`.
+- Model-aware quota authority receipt in `receipts/model-aware-quota-authority-2026-09-04.md`.
 
 ## Validation status
 
-- Repository/unit integration: **PASS** on GitHub Actions across Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the current measurement/receipt/credit code path (run #65 on the measurement-state boundary passed; subsequent documentation-only updates do not change that code result).
+- Repository/unit integration: **PASS** on GitHub Actions across Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the model-aware quota/receipt code path (run #73 PASS).
 - Native installed Codex hook execution: **NOT YET PROVEN**.
 - Signed-in Plus app-server quota read: **NOT YET PROVEN**.
 - Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
 - Native Astra picker/model identity on Plus: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
+- Native Astra quota-authority shape: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
 - Astra efficiency improvement: **BLOCKED UNTIL OBSERVE-ONLY BASELINE EXISTS**.
 
 ## Immediate execution queue
@@ -116,11 +123,11 @@ The Plus baseline plan now records task shape as well as allowance movement: pla
 3. Prove hook setup/idempotence/uninstall on actual user configuration.
 4. Temporarily target one current exact native model only for plumbing proof, then prove another model is a strict no-op and clear the temporary target.
 5. Verify whether quota/model app-server reads coexist cleanly with a normal active Codex session.
-6. Add every observed response variant as a fixture without weakening unknown/conflict handling.
+6. Record whether the signed-in account exposes shared-default and/or model-specific quota buckets and add every observed response variant as a fixture without weakening unknown/conflict handling.
 7. Continue collecting Pro Astra reports only when plan, task, reasoning, runtime, usage/credits, tools/subagents, or outcome make them useful evidence.
-8. When Astra appears on Plus, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity.
+8. When Astra appears on Plus, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity -> quota-authority selection.
 9. Bind receipt before/after quota capture to the validated Astra turn lifecycle without adding a new user workflow.
-10. Run the real-work Plus observe-only baseline using workload categories informed by the early Pro evidence: codebase audit, focused implementation, multi-service/refactor work, browser/computer research, and a high-value difficult task.
+10. Run the real-work Plus observe-only baseline using workload categories informed by the early Pro evidence: codebase audit, focused implementation, multi-service/refactor work, browser/computer research, and a high-value difficult task. Avoid simultaneous Codex usage during controlled runs if only a shared-default meter is available.
 11. Test narrowly scoped efficiency interventions only after baseline review.
 
 ## Research posture
