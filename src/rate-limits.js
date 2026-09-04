@@ -9,6 +9,10 @@ function asNullableInteger(value) {
   return Number.isInteger(value) ? value : null;
 }
 
+function normalizeModelId(value) {
+  return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : null;
+}
+
 function normalizeCredits(raw) {
   if (raw === null || raw === undefined) return { status: "not_reported" };
   if (!isObject(raw)) return { status: "malformed", reason: "credits_not_object" };
@@ -234,6 +238,67 @@ export function normalizeRateLimitResponse(payload) {
   };
 }
 
+/**
+ * Select the best quota authority for one exact native model id.
+ *
+ * Prefer a single bucket whose `normalModelSlug` exactly names the model. If
+ * no model-specific bucket exists, a default snapshot with no model slug is
+ * treated as shared account allowance. Never guess from limit names.
+ */
+export function selectUsageAuthority(response, model) {
+  const target = normalizeModelId(model);
+  if (!target || !isObject(response)) {
+    return { status: "unavailable", reason: "missing_model_or_response" };
+  }
+
+  const exactBuckets = Object.entries(response.buckets ?? {}).filter(([, snapshot]) => {
+    return normalizeModelId(snapshot?.normalModelSlug) === target;
+  });
+
+  if (exactBuckets.length > 1) {
+    return {
+      status: "ambiguous",
+      reason: "multiple_model_specific_buckets",
+      candidateKeys: exactBuckets.map(([key]) => key)
+    };
+  }
+
+  if (exactBuckets.length === 1) {
+    const [key, snapshot] = exactBuckets[0];
+    return {
+      status: "selected",
+      kind: "model_bucket",
+      key,
+      limitId: snapshot.limitId ?? null,
+      normalModelSlug: snapshot.normalModelSlug ?? null,
+      snapshot
+    };
+  }
+
+  const fallback = response.default;
+  if (!fallback || fallback.status !== "reported") {
+    return { status: "unavailable", reason: "default_not_reported" };
+  }
+
+  const fallbackModel = normalizeModelId(fallback.normalModelSlug);
+  if (fallbackModel && fallbackModel !== target) {
+    return {
+      status: "unavailable",
+      reason: "default_targets_other_model",
+      defaultModelSlug: fallback.normalModelSlug
+    };
+  }
+
+  return {
+    status: "selected",
+    kind: fallbackModel ? "model_default" : "shared_default",
+    key: "default",
+    limitId: fallback.limitId ?? null,
+    normalModelSlug: fallback.normalModelSlug ?? null,
+    snapshot: fallback
+  };
+}
+
 export function calculateWindowDelta(start, end) {
   if (start?.status !== "reported" || end?.status !== "reported") {
     return { status: "unavailable" };
@@ -276,5 +341,68 @@ export function calculateDefaultUsageDelta(startResponse, endResponse) {
   return {
     fiveHour: calculateWindowDelta(startResponse?.default?.fiveHour, endResponse?.default?.fiveHour),
     weekly: calculateWindowDelta(startResponse?.default?.weekly, endResponse?.default?.weekly)
+  };
+}
+
+/**
+ * Calculate allowance movement against a stable model-aware authority.
+ * A change from shared/default to a model-specific bucket is recorded as an
+ * authority change rather than silently combining different meters.
+ */
+export function calculateModelUsageDelta(startResponse, endResponse, model) {
+  const startAuthority = selectUsageAuthority(startResponse, model);
+  const endAuthority = selectUsageAuthority(endResponse, model);
+
+  if (startAuthority.status !== "selected" || endAuthority.status !== "selected") {
+    const reason =
+      startAuthority.status === "ambiguous" || endAuthority.status === "ambiguous"
+        ? "ambiguous_authority"
+        : "unavailable_authority";
+    return {
+      authority: {
+        status: reason,
+        start: { ...startAuthority, snapshot: undefined },
+        end: { ...endAuthority, snapshot: undefined }
+      },
+      fiveHour: { status: "unavailable" },
+      weekly: { status: "unavailable" }
+    };
+  }
+
+  if (startAuthority.kind !== endAuthority.kind || startAuthority.key !== endAuthority.key) {
+    return {
+      authority: {
+        status: "authority_changed",
+        start: {
+          kind: startAuthority.kind,
+          key: startAuthority.key,
+          limitId: startAuthority.limitId,
+          normalModelSlug: startAuthority.normalModelSlug
+        },
+        end: {
+          kind: endAuthority.kind,
+          key: endAuthority.key,
+          limitId: endAuthority.limitId,
+          normalModelSlug: endAuthority.normalModelSlug
+        }
+      },
+      fiveHour: { status: "unavailable" },
+      weekly: { status: "unavailable" }
+    };
+  }
+
+  return {
+    authority: {
+      status: "stable",
+      kind: startAuthority.kind,
+      key: startAuthority.key,
+      limitId: startAuthority.limitId,
+      normalModelSlug: startAuthority.normalModelSlug
+    },
+    fiveHour: calculateWindowDelta(
+      startAuthority.snapshot.fiveHour,
+      endAuthority.snapshot.fiveHour
+    ),
+    weekly: calculateWindowDelta(startAuthority.snapshot.weekly, endAuthority.snapshot.weekly)
   };
 }
