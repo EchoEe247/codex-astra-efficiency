@@ -9,6 +9,25 @@ function asNullableInteger(value) {
   return Number.isInteger(value) ? value : null;
 }
 
+function normalizeCredits(raw) {
+  if (raw === null || raw === undefined) return { status: "not_reported" };
+  if (!isObject(raw)) return { status: "malformed", reason: "credits_not_object" };
+
+  if (typeof raw.hasCredits !== "boolean" || typeof raw.unlimited !== "boolean") {
+    return { status: "malformed", reason: "invalid_credit_flags" };
+  }
+  if (raw.balance !== null && raw.balance !== undefined && typeof raw.balance !== "string") {
+    return { status: "malformed", reason: "invalid_credit_balance" };
+  }
+
+  return {
+    status: "reported",
+    hasCredits: raw.hasCredits,
+    unlimited: raw.unlimited,
+    balance: typeof raw.balance === "string" ? raw.balance : null
+  };
+}
+
 function normalizeWindow(raw, slot, source) {
   if (raw === null || raw === undefined) return null;
   if (!isObject(raw)) {
@@ -140,6 +159,7 @@ export function normalizeRateLimitSnapshot(snapshot, source = "rateLimits") {
     return {
       status: "not_reported",
       source,
+      credits: { status: "not_reported" },
       fiveHour: { status: "not_reported", durationMins: FIVE_HOUR_WINDOW_MINS },
       weekly: { status: "not_reported", durationMins: WEEKLY_WINDOW_MINS },
       unclassified: [],
@@ -167,6 +187,7 @@ export function normalizeRateLimitSnapshot(snapshot, source = "rateLimits") {
     normalModelSlug:
       typeof snapshot.normalModelSlug === "string" ? snapshot.normalModelSlug : null,
     planType: typeof snapshot.planType === "string" ? snapshot.planType : null,
+    credits: normalizeCredits(snapshot.credits),
     ordinaryUsageFields: {
       rateLimitReachedType:
         typeof snapshot.rateLimitReachedType === "string" ? snapshot.rateLimitReachedType : null,
