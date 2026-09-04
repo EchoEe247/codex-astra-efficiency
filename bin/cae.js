@@ -2,9 +2,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { readAccountRateLimits } from "../src/app-server.js";
+import { readAccountRateLimits, readModelList } from "../src/app-server.js";
 import { loadConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
+import { summarizeAstraDiscovery } from "../src/model-discovery.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
 import { applyHookSetup, planHookSetup } from "../src/setup.js";
 
@@ -52,6 +53,43 @@ function hookReadiness() {
   }
 }
 
+async function integrationProbe() {
+  const [quotaResult, modelResult] = await Promise.allSettled([
+    readAccountRateLimits(),
+    readModelList()
+  ]);
+
+  return {
+    codex: codexVersion(),
+    nativeHooks: hookReadiness(),
+    quota:
+      quotaResult.status === "fulfilled"
+        ? {
+            available: true,
+            source: "codex_app_server",
+            value: normalizeRateLimitResponse(quotaResult.value.result)
+          }
+        : {
+            available: false,
+            source: "codex_app_server",
+            error: quotaResult.reason?.message ?? String(quotaResult.reason),
+            meaning: "quota_visibility_unavailable_not_zero"
+          },
+    modelCatalog:
+      modelResult.status === "fulfilled"
+        ? {
+            available: true,
+            source: "codex_app_server",
+            astraDiscovery: summarizeAstraDiscovery(modelResult.value.result)
+          }
+        : {
+            available: false,
+            source: "codex_app_server",
+            error: modelResult.reason?.message ?? String(modelResult.reason)
+          }
+  };
+}
+
 async function main() {
   const command = process.argv[2] ?? "help";
   const flags = new Set(process.argv.slice(3));
@@ -83,6 +121,11 @@ async function main() {
       nativeHooks: hookReadiness()
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+
+  if (command === "probe") {
+    process.stdout.write(`${JSON.stringify(await integrationProbe(), null, 2)}\n`);
     return;
   }
 
@@ -147,7 +190,7 @@ async function main() {
   }
 
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n"
   );
 }
 
