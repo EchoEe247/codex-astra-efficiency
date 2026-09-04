@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -44,6 +45,38 @@ export function loadConfig(env = process.env) {
     dir,
     configPath,
     astraModelIds: envIds.length > 0 ? envIds : fileIds,
+    warning: null
+  };
+}
+
+function atomicWrite(file, content) {
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const temp = path.join(dir, `.config.json.cae-${process.pid}-${crypto.randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(temp, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    fs.renameSync(temp, file);
+  } finally {
+    try {
+      fs.unlinkSync(temp);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
+}
+
+export function writeConfig({ astraModelIds }, env = process.env) {
+  const ids = parseModelIds(astraModelIds);
+  const dir = stateDir(env);
+  const configPath = path.join(dir, "config.json");
+  atomicWrite(
+    configPath,
+    `${JSON.stringify({ schemaVersion: 1, astraModelIds: ids }, null, 2)}\n`
+  );
+  return {
+    dir,
+    configPath,
+    astraModelIds: ids,
     warning: null
   };
 }
