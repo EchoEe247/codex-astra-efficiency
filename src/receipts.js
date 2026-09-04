@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { normalizeCompletionEvidence, normalizeRunDescriptor } from "./measurement.js";
 import { calculateDefaultUsageDelta, normalizeRateLimitResponse } from "./rate-limits.js";
 
-export const RECEIPT_SCHEMA_VERSION = 1;
+export const RECEIPT_SCHEMA_VERSION = 2;
 export const RECEIPT_OUTCOMES = Object.freeze([
   "PASS",
   "PARTIAL",
@@ -18,11 +19,6 @@ function isoTimestamp(value = new Date()) {
   return date.toISOString();
 }
 
-function sanitizeTaskClass(value) {
-  if (typeof value !== "string" || !value.trim()) return "unclassified";
-  return value.trim().slice(0, 80);
-}
-
 function normalizeQuota(rawQuota) {
   if (rawQuota === null || rawQuota === undefined) return null;
   return normalizeRateLimitResponse(rawQuota);
@@ -32,7 +28,13 @@ export function startRunReceipt({
   id = crypto.randomUUID(),
   model,
   codexVersion = null,
+  plan = null,
+  reasoningEffort = null,
+  serviceTier = null,
   taskClass = "unclassified",
+  projectScale = null,
+  continuity = null,
+  contextBucket = null,
   rawQuota = null,
   startedAt = new Date()
 } = {}) {
@@ -40,18 +42,35 @@ export function startRunReceipt({
     throw new TypeError("model is required");
   }
 
+  const descriptor = normalizeRunDescriptor({
+    plan,
+    reasoningEffort,
+    serviceTier,
+    taskClass,
+    projectScale,
+    continuity,
+    contextBucket
+  });
+
   return {
     schemaVersion: RECEIPT_SCHEMA_VERSION,
     id,
     status: "running",
     model: model.trim(),
     codexVersion: typeof codexVersion === "string" ? codexVersion : null,
-    taskClass: sanitizeTaskClass(taskClass),
+    ...descriptor,
     startedAt: isoTimestamp(startedAt),
     endedAt: null,
     durationMs: null,
     outcome: null,
+    requestedObjectiveCompleted: null,
+    validationStatus: null,
     humanInterventions: null,
+    subagentCount: null,
+    toolClasses: [],
+    scopeExpanded: null,
+    reworkNeeded: null,
+    workDisposition: null,
     startQuota: normalizeQuota(rawQuota),
     endQuota: null,
     usageDelta: null
@@ -63,7 +82,14 @@ export function completeRunReceipt(
   {
     rawQuota = null,
     outcome = "UNKNOWN",
+    requestedObjectiveCompleted = null,
+    validationStatus = null,
     humanInterventions = null,
+    subagentCount = null,
+    toolClasses = [],
+    scopeExpanded = null,
+    reworkNeeded = null,
+    workDisposition = null,
     endedAt = new Date()
   } = {}
 ) {
@@ -73,12 +99,17 @@ export function completeRunReceipt(
   if (!RECEIPT_OUTCOMES.includes(outcome)) {
     throw new TypeError(`unsupported outcome: ${outcome}`);
   }
-  if (
-    humanInterventions !== null &&
-    (!Number.isInteger(humanInterventions) || humanInterventions < 0)
-  ) {
-    throw new TypeError("humanInterventions must be a non-negative integer or null");
-  }
+
+  const evidence = normalizeCompletionEvidence({
+    requestedObjectiveCompleted,
+    validationStatus,
+    humanInterventions,
+    subagentCount,
+    toolClasses,
+    scopeExpanded,
+    reworkNeeded,
+    workDisposition
+  });
 
   const endedAtIso = isoTimestamp(endedAt);
   const startedMs = new Date(receipt.startedAt).getTime();
@@ -100,7 +131,7 @@ export function completeRunReceipt(
     endedAt: endedAtIso,
     durationMs: endedMs - startedMs,
     outcome,
-    humanInterventions,
+    ...evidence,
     endQuota,
     usageDelta
   };
