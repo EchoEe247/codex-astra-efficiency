@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**FOUNDATION COMPLETE ENOUGH FOR INSTALLED-RUNTIME VALIDATION / PRE-ASTRA PLUS**
+**PRE-ASTRA NATIVE RUNTIME VALIDATION PASS / ASTRA PLUS LAUNCH WAIT**
 
-The repository remains private while the native Codex path is proven against a real signed-in installation and Astra continues rolling from Pro into Plus.
+The repository remains private while Astra continues rolling from Pro into Plus and the final launcher-compatibility improvement is revalidated on the Termux test environment.
 
 ## Locked product direction
 
@@ -24,117 +24,123 @@ The repository remains private while the native Codex path is proven against a r
 - Missing rate-limit data is unknown, never guessed.
 - Local-first privacy is mandatory.
 
-## Technical findings so far
+## Native runtime validation authority
 
-Current upstream Codex source provides a strong native integration candidate:
+`receipts/native-runtime-validation-final-2026-09-04.md` is the authoritative A-F runtime receipt.
 
-- hooks are currently stable/default-enabled;
-- `UserPromptSubmit` and `Stop` expose `session_id`, `turn_id`, and active `model`;
-- `UserPromptSubmit` supports optional additional context, which remains disabled in baseline mode;
-- `CODEX_HOME` resolves from the environment override or defaults to `~/.codex`;
-- global hook configuration is read from the Codex home hook file;
-- app-server exposes `account/rateLimits/read`, `model/list`, and rolling limit updates;
-- app-server wire messages are newline-delimited JSON and intentionally omit a JSON-RPC `jsonrpc` field;
-- initialize uses `clientInfo` plus optional capabilities;
-- current rate-limit responses can expose duration, used percent, reset time, plan type, per-limit buckets, ordinary-usage permission, reset-credit summaries, and purchased-credit snapshots (`hasCredits`, `unlimited`, backend balance string);
-- current `rateLimitsByLimitId` buckets may expose `normalModelSlug`, which can identify the normal model associated with a quota alias;
-- current model catalog exposes exact native model id, display name, hidden/default state, reasoning efforts, and other picker metadata.
+Validated environment:
 
-These remain source/protocol findings until reproduced against the installed Codex version used for validation.
+- Android aarch64 / Termux;
+- Node v24.18.0;
+- Codex 0.149.0;
+- ChatGPT Plus sign-in;
+- default `~/.codex` home.
 
-## Early Astra Pro field evidence
+Result:
 
-Astra reached Pro users before the project test Plus account. Early field reports are now tracked in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
+- Gate A package integrity: **PASS**.
+- Gate B signed-in native quota/model app-server reads: **PASS with launcher caveat**.
+- Gate C hook setup/idempotence/ownership: **PASS**.
+- Gate D live target + strict non-target hook behavior: **PASS**.
+- Gate E app-server coexistence with active Codex: **PASS**.
+- Gate F CAE-only uninstall + post-uninstall Codex health: **PASS**.
 
-Notable reports include:
+Live Gate D proved `UserPromptSubmit` + `Stop` for exact model `gpt-5.6-sol`, stable opaque session/turn correlation, and strict no-op persistence for a live `gpt-5.6-luna` non-target turn.
 
-- Pro 5x / Ultra codebase audit / no subagents: about **10% weekly in 14m22s**.
-- Pro 5x / Medium browser-computer research: about **3% weekly**; the user reported computer use felt at least about 2x as fast as Sol High.
-- Pro 20x / existing 19-microservice gRPC migration: about **5% weekly in 10 minutes**.
-- Purchased-credit / Medium docs + Git branch scan + ~10k-line refactor assessment: **$2.48 equivalent** for the run.
-- Other early users report materially faster task execution, reinforcing that burn must be judged against completed work and rework avoided rather than percentage alone.
+The native first-run hook trust gate (`Hooks need review / Trust all`) is a real product UX requirement. CAE must not bypass Codex trust controls.
 
-These are anecdotal and use different plan denominators. They must not be converted directly into Plus percentages. They do, however, strengthen the hypothesis that project breadth/context, reconnaissance, computer use, reasoning effort, and repeated rediscovery all need to be measured explicitly.
+## Real Plus quota shape observed
 
-OpenAI currently states that Astra can consume Work/Codex allowance faster than Sol and that task, input/output size, reasoning setting, and Fast mode affect usage. Current flexible-pricing rate cards also show Astra at a materially higher token rate than Sol. This supports CAE's decision to optimize value density rather than prompt count.
+The signed-in Plus account exposed:
 
-## Measurement authority
+- 300-minute 5-hour window;
+- 10,080-minute weekly window;
+- one shared/default `codex` quota bucket;
+- `normalModelSlug=null`;
+- no model-specific quota bucket in the observed account state;
+- purchased-credit snapshot with `hasCredits=false`, `unlimited=false`, balance `"0"`;
+- reset-credit summary;
+- Astra absent from the native catalog (`not_found`).
 
-`docs/MEASUREMENT_MODEL.md` defines the evidence hierarchy CAE must use:
+Because the observed meter is shared/default, controlled Astra baseline experiments must avoid concurrent Codex usage unless launch-time data exposes a dedicated Astra bucket.
 
-1. observed facts;
-2. deterministic derived measurements;
-3. signals;
-4. efficiency hypotheses;
-5. validated interventions.
+Catalog contents and reset-credit counts changed naturally between reads, so both are treated as dynamic observations rather than constants.
 
-CAE must not jump from one expensive run or one observed behavior directly to a product claim. The current measurement code deliberately refuses to declare sparse metadata sufficient for an efficiency claim.
+## Termux launcher compatibility
 
-The Plus baseline plan records task shape as well as allowance movement: plan, reasoning effort, Standard/Fast tier, task class, project-scale bucket, fresh/continuation state, context bucket where safely exposed, subagents, coarse tool classes, scope expansion, objective completion, validation status, human interventions, and later rework.
+Runtime validation found one portability issue:
 
-Quota measurement is now model-aware: CAE prefers exactly one `rateLimitsByLimitId` bucket whose `normalModelSlug` matches the active model, otherwise it can use an unlabeled default only as a clearly marked `shared_default`. Multiple exact matches are ambiguous; a default explicitly assigned to another model is rejected. Start/end authorities must remain stable before a percentage change is called usage burn.
+- direct CAE spawning of the standalone musl Codex binary could not resolve DNS because that environment had no usable `/etc/resolv.conf`;
+- the user's normal `/usr/bin/codex` wrapper succeeded with the same binary, Codex home, and ChatGPT auth because its proot environment supplied working resolver state.
 
-## Implemented foundation
+Issue #6 tracks this as launcher equivalence rather than an auth/protocol problem.
 
-- Exact configured Astra model targeting with strict non-Astra no-op behavior.
-- Fail-open hook handler.
-- Privacy-minimal local Astra observations using opaque SHA-256 session/turn correlation keys rather than raw ids.
-- Raw prompt, assistant message, cwd, and transcript paths are not persisted by baseline observation.
-- Non-destructive hook merge/removal primitives with idempotence tests.
-- Atomic global hook setup/uninstall honoring upstream `CODEX_HOME` semantics.
-- `cae setup --dry-run`, `cae uninstall --dry-run`, and hook-readiness reporting in `cae doctor`.
-- Exact target compatibility control (`cae target show|set|clear`) for private/runtime validation; public zero-friction setup remains the goal.
-- Short-lived local Codex app-server client.
-- `cae quota` for normalized Plus rate-limit visibility.
-- `cae probe` for read-only quota + native model-catalog reconnaissance.
-- Conservative native Astra discovery that returns `not_found`, `single_candidate`, or `ambiguous` and never silently activates a candidate.
-- Duration-based 300-minute / 10,080-minute normalization without assuming `primary` or `secondary` semantics.
-- First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
-- Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
-- Native purchased-credit snapshot preservation with `not_reported`/`malformed` handling and no invented unit or dollar conversion.
-- Model-aware quota authority selection with `model_bucket`, `model_default`, `shared_default`, ambiguous, unavailable, and authority-change handling.
-- Fixture/test coverage for complete, missing-5h, missing-weekly, partial, malformed, contradictory, missing-credit, malformed-credit, shared-default, exact-model-bucket, ambiguous-model-bucket, and wrong-model-default states.
-- Privacy-safe run measurement descriptors in `src/measurement.js`.
-- Receipt schema v2 with plan, reasoning effort, service tier, task class, project scale, continuity/context buckets, objective completion, validation status, interventions, subagents, coarse tool classes, scope expansion, rework, and work disposition.
-- Receipts persist the quota authority used for 5-hour/weekly deltas instead of silently assuming the default meter belongs to Astra.
-- Receipt plan defaults to the native quota-reported plan when available rather than trusting a conflicting caller label.
-- Receipt normalization intentionally excludes raw account IDs from the persisted path.
-- Prior-art authority in `docs/PRIOR_ART.md`.
-- Installed-runtime execution protocol in `docs/NATIVE_RUNTIME_VALIDATION.md`.
-- Updated integration authority in `docs/CODEX_INTEGRATION_RECON.md`.
-- Early Pro usage research authority in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
-- Measurement authority in `docs/MEASUREMENT_MODEL.md`.
-- Model-aware quota authority receipt in `receipts/model-aware-quota-authority-2026-09-04.md`.
+Implementation is now in progress/current main:
+
+- `CAE_CODEX_COMMAND` can select the same executable/wrapper the user normally launches;
+- explicit programmatic selection takes precedence over the environment override;
+- ordinary platforms retain `codex` / `codex.cmd` defaults;
+- the same resolved launcher is used for app-server reads and Codex version reporting;
+- the value is treated as one executable path/name, not a shell command.
+
+This launcher change still requires CI completion and one local Termux revalidation before Issue #6 can close.
+
+## Technical foundation
+
+Implemented:
+
+- exact configured Astra-model targeting with strict non-Astra no-op behavior;
+- fail-open hook handler;
+- privacy-minimal local observations using opaque SHA-256 session/turn correlation keys;
+- no raw prompt, assistant response, cwd, transcript path, or raw session/turn id in baseline events;
+- non-destructive hook merge/removal with idempotence coverage;
+- atomic setup/uninstall honoring `CODEX_HOME`;
+- `cae doctor`, `probe`, `quota`, `events`, setup/uninstall dry-runs, and private target controls;
+- native Codex app-server client for `account/rateLimits/read` and `model/list`;
+- duration-based 300-minute / 10,080-minute normalization;
+- explicit missing, malformed, partial, and conflicting quota states;
+- reset-aware before/after allowance deltas;
+- purchased-credit/reset-credit preservation without invented units;
+- model-aware quota authority selection using exact `normalModelSlug` when available and labeled `shared_default` otherwise;
+- receipt schema v2 for task shape, outcome quality, intervention burden, tool classes, and quota deltas;
+- measurement evidence hierarchy in `docs/MEASUREMENT_MODEL.md`;
+- early Astra Pro usage evidence in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`;
+- prior-art authority in `docs/PRIOR_ART.md`.
+
+## Early Astra Pro evidence
+
+Pro field reports remain research inputs, not Plus conversion formulas. Notable observations include high burn for broad audits, multi-service work, browser/computer research, and project-state/refactor assessment even when elapsed time is short.
+
+The project therefore continues optimizing for:
+
+**useful completed work per unit of Astra allowance**
+
+—not prompt count or wall-clock duration.
 
 ## Validation status
 
-- Repository/unit integration: **PASS** on GitHub Actions across Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the model-aware quota/receipt code path (run #73 PASS).
-- Native installed Codex hook execution: **NOT YET PROVEN**.
-- Signed-in Plus app-server quota read: **NOT YET PROVEN**.
-- Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
+- Cross-platform unit/source CI before launcher change: **PASS** on Ubuntu Node 20, Ubuntu Node 22, Windows Node 22.
+- Real installed Codex A-F runtime validation: **PASS** on Termux/Codex 0.149.0.
+- Signed-in Plus app-server quota read: **PASS** through the user's working wrapper path.
+- Side-by-side app-server read with active Codex: **PASS**.
+- Live exact-target hook observation: **PASS**.
+- Live non-target strict no-op: **PASS**.
+- Setup ownership/uninstall: **PASS**.
+- Launcher override implementation: **CODE COMPLETE; CI/RUNTIME REVALIDATION PENDING**.
 - Native Astra picker/model identity on Plus: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
 - Native Astra quota-authority shape: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
 - Astra efficiency improvement: **BLOCKED UNTIL OBSERVE-ONLY BASELINE EXISTS**.
 
 ## Immediate execution queue
 
-1. Run `docs/NATIVE_RUNTIME_VALIDATION.md` Gates A-F on a real installed, signed-in Codex environment.
-2. Capture exact Codex version and real `cae probe` / `cae quota` behavior.
-3. Prove hook setup/idempotence/uninstall on actual user configuration.
-4. Temporarily target one current exact native model only for plumbing proof, then prove another model is a strict no-op and clear the temporary target.
-5. Verify whether quota/model app-server reads coexist cleanly with a normal active Codex session.
-6. Record whether the signed-in account exposes shared-default and/or model-specific quota buckets and add every observed response variant as a fixture without weakening unknown/conflict handling.
-7. Continue collecting Pro Astra reports only when plan, task, reasoning, runtime, usage/credits, tools/subagents, or outcome make them useful evidence.
-8. When Astra appears on Plus, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity -> quota-authority selection.
-9. Bind receipt before/after quota capture to the validated Astra turn lifecycle without adding a new user workflow.
-10. Run the real-work Plus observe-only baseline using workload categories informed by the early Pro evidence: codebase audit, focused implementation, multi-service/refactor work, browser/computer research, and a high-value difficult task. Avoid simultaneous Codex usage during controlled runs if only a shared-default meter is available.
-11. Test narrowly scoped efficiency interventions only after baseline review.
-
-## Research posture
-
-Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md` and `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
-
-The current working optimization target is **useful completed work per unit of Astra allowance**, not prompts/week or raw runtime. A future preflight/advisory layer is plausible, but no task-routing or intervention policy should ship before Plus observations exist.
+1. Finish CI for the launcher override implementation.
+2. Revalidate on Termux using `CAE_CODEX_COMMAND=/usr/bin/codex` with `cae doctor`, `cae probe`, and `cae quota`; close Issue #6 only if the native commands now work without the previous manual workaround.
+3. Keep collecting Pro Astra reports only when plan, task, reasoning, runtime, usage/credits, tools/subagents, or outcome make them useful evidence.
+4. When Astra appears on Plus, run Gate G: native catalog candidate -> picker/active model identity -> exact hook identity -> quota-authority selection.
+5. Bind receipt before/after quota capture to the validated Astra turn lifecycle without creating a new user workflow.
+6. Run the real-work Plus observe-only baseline from `docs/ASTRA_PLUS_TEST_PLAN.md`.
+7. Test narrowly scoped efficiency interventions only after baseline review.
+8. Ship v0.1 as soon as the evidence gate is satisfied; prefer an honest observability-first release over unvalidated efficiency claims.
 
 ## Explicitly deferred
 
@@ -149,4 +155,4 @@ The current working optimization target is **useful completed work per unit of A
 
 ## Release posture
 
-Public v0.1 should ship as soon as the evidence gate is satisfied after Astra reaches Plus. If measured optimizations are not yet trustworthy, a clean observability-first release is preferable to unvalidated efficiency claims.
+CAE is now **Astra-ready at the native integration layer**. The remaining launch blocker is actual Astra availability on the Plus test account, plus completion of the small launcher portability revalidation.
