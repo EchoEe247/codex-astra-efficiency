@@ -1,0 +1,18 @@
+{
+  "name": "codex-astra-efficiency",
+  "version": "0.0.0-dev",
+  "description": "A lightweight Astra-specific efficiency layer for ChatGPT Plus users in Codex.",
+  "type": "module",
+  "bin": {
+    "cae": "./bin/cae.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/cae.js && node --check src/config.js && node --check src/hook.js && node --check src/observe.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}
