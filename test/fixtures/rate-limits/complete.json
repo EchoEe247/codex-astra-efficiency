@@ -6,6 +6,7 @@
     "limitName": "Codex",
     "normalModelSlug": null,
     "planType": "plus",
+    "credits": { "hasCredits": true, "unlimited": false, "balance": "38" },
     "primary": { "usedPercent": 18, "windowDurationMins": 300, "resetsAt": 1788552000 },
     "secondary": { "usedPercent": 37, "windowDurationMins": 10080, "resetsAt": 1789063200 },
     "rateLimitReachedType": null,
@@ -17,6 +18,7 @@
       "limitName": "Codex",
       "normalModelSlug": null,
       "planType": "plus",
+      "credits": { "hasCredits": true, "unlimited": false, "balance": "38" },
       "primary": { "usedPercent": 18, "windowDurationMins": 300, "resetsAt": 1788552000 },
       "secondary": { "usedPercent": 37, "windowDurationMins": 10080, "resetsAt": 1789063200 }
     }
