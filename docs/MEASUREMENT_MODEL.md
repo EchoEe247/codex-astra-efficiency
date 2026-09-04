@@ -51,6 +51,23 @@ A missing window is `not_reported`, not zero and not unlimited.
 
 A reset-crossing or non-monotonic percentage change is not labeled as usage burn.
 
+### Model-aware quota authority
+
+Current Codex app-server responses can contain both a default rate-limit snapshot and `rateLimitsByLimitId` buckets. A bucket may also expose `normalModelSlug`, described upstream as the normal model whose display name and reasoning options describe that quota alias.
+
+CAE must not assume the default snapshot is always the only relevant meter for Astra.
+
+Selection rules:
+
+1. If exactly one normalized bucket has `normalModelSlug` exactly matching the active native Astra model id, use that bucket as the model-specific authority.
+2. If more than one bucket exactly matches the model, report the authority as ambiguous and do not choose one heuristically.
+3. If no exact model bucket exists and the default snapshot has no `normalModelSlug`, the default can be used as a **shared account allowance** authority.
+4. If the default explicitly names a different model, do not use it as Astra's authority.
+5. Do not infer model identity from `limitName`, display text, bucket key substrings, or percentages.
+6. Start and end snapshots must use the same authority kind/key. If the backend changes authority shape during a run, record `authority_changed` rather than combining two different meters.
+
+A shared-default delta is still useful evidence, but it should remain labeled shared. It can be contaminated by simultaneous activity elsewhere on the same allowance, so the baseline should avoid concurrent Codex work when establishing controlled Astra cost curves.
+
 ## Work evidence
 
 Where it can be recorded without changing normal Codex behavior, capture:
