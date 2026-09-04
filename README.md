@@ -38,8 +38,6 @@ CAE does **not** manage, route, tune, or replace the user's other Codex models. 
 
 ## Current private foundation
 
-CAE currently has a zero-runtime-dependency Node foundation for validating the least-invasive Codex integration path.
-
 Implemented:
 
 - exact configured Astra-model targeting with strict non-Astra no-op behavior;
@@ -51,12 +49,51 @@ Implemented:
 - explicit missing, malformed, partial, and conflicting quota states;
 - reset-aware before/after allowance deltas;
 - native purchased-credit snapshot preservation when Codex reports it, without inventing a unit or dollar conversion;
+- model-aware quota authority selection using exact native model metadata when available;
 - privacy-safe measurement descriptors for task shape and outcome quality;
 - local Astra run-receipt schema v2 with allowance, workload, objective, validation, subagent/tool, intervention, scope, and rework evidence;
 - read-only native-model discovery that never silently activates an Astra candidate;
+- explicit Codex launcher override for environments where the user's normal wrapper provides required runtime setup;
 - Linux and Windows CI coverage.
 
-The implementation is deliberately **not** an Astra optimizer yet. The next evidence gate is real installed-Codex validation, followed by the first normal Astra real-work baseline when Plus access reaches the test account.
+The implementation is deliberately **not** an Astra optimizer yet. The first Astra changes will be driven by the observe-only Plus baseline rather than assumptions.
+
+## Real native Codex validation
+
+CAE has completed Gates A-F against a real signed-in ChatGPT Plus Codex installation on Android/Termux with Codex 0.149.0.
+
+Validated:
+
+- package integrity;
+- signed-in quota/model app-server reads;
+- hook setup and idempotence;
+- live exact-target `UserPromptSubmit` + `Stop` observations;
+- strict live non-target no-op behavior;
+- app-server coexistence with an active Codex process;
+- CAE-only uninstall and healthy post-uninstall Codex operation.
+
+The native Codex hook trust prompt (`Hooks need review / Trust all`) is a real first-run UX step and is not bypassed by CAE.
+
+See [`receipts/native-runtime-validation-final-2026-09-04.md`](receipts/native-runtime-validation-final-2026-09-04.md).
+
+## Codex launcher compatibility
+
+Ordinary installations use the normal platform command automatically:
+
+- Unix-like: `codex`
+- Windows: `codex.cmd`
+
+If the user's working Codex command is a wrapper or a different executable path, CAE can use the same launcher:
+
+```text
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae doctor
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae probe
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae quota
+```
+
+The override is one executable path/name, not a shell command. CAE uses the same resolved launcher for Codex version checks and short-lived app-server reads.
+
+This was added after Termux validation showed that the user's normal Codex wrapper supplied resolver environment required by the standalone musl binary.
 
 ## How CAE measures before it optimizes
 
@@ -97,29 +134,25 @@ Key behavior:
 - `cae target ...` is a private validation/compatibility control; the public product goal is zero-friction Astra targeting after the exact production picker identity is validated.
 - `cae events` contains only targeted-model baseline observations and excludes raw prompt/response/path content.
 
-## Development and validation sequence
+## Remaining sequence
 
-Before Astra reaches Plus broadly, CAE validates the non-Astra foundation without pretending that source-level compatibility is runtime proof.
-
-The remaining sequence is:
-
-1. validate the package against a real installed, signed-in Codex environment;
-2. prove native hook setup, exact picker model identity, strict non-target no-op behavior, quota/model reads, coexistence, and clean uninstall;
-3. when Astra is available, prove the exact native Astra model identifier;
+1. finish local revalidation of the launcher override on the Termux test environment;
+2. wait for Astra to appear on the ChatGPT Plus test account;
+3. prove the exact native Astra model identity and launch-time quota authority (Gate G);
 4. run an **observe-only** Astra campaign on needed real work;
 5. measure 5-hour and weekly allowance changes alongside task shape, completion quality, validation, intervention burden, and later rework;
-6. only then test narrowly scoped Astra-specific efficiency interventions;
-7. ship defaults only when real-work evidence shows they reduce avoidable burn without degrading completion quality.
+6. test one narrowly scoped Astra efficiency hypothesis at a time;
+7. ship defaults only when real-work evidence shows lower avoidable burn without degrading completion quality.
 
-See [`docs/NATIVE_RUNTIME_VALIDATION.md`](docs/NATIVE_RUNTIME_VALIDATION.md) for the installed-runtime gate and [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md) for the later real-work campaign.
+See [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md).
 
 ## Current status
 
-**Foundation complete enough for installed-runtime validation / pre-Astra Plus.**
+**Pre-Astra native runtime validation: PASS.**
 
-Cross-platform source/unit validation currently passes on Ubuntu Node 20, Ubuntu Node 22, and Windows Node 22 for the measurement/receipt/credit code path. This does **not** yet prove behavior against a real signed-in Codex installation or the production Astra model identity.
+Astra is not yet present in the Plus test account's native Codex catalog, so the project is waiting at the Astra launch gate rather than fabricating optimization behavior in advance.
 
-The project remains private until those runtime and real-work evidence gates are satisfied.
+The project remains private until the Astra real-work evidence gate is satisfied.
 
 ## Authorities
 
@@ -132,5 +165,5 @@ The project remains private until those runtime and real-work evidence gates are
 - [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md)
 - [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)
 - [`trackers/STATE.md`](trackers/STATE.md)
-- [`receipts/pre-runtime-readiness-2026-09-04.md`](receipts/pre-runtime-readiness-2026-09-04.md)
-- [`receipts/measurement-substrate-2026-09-04.md`](receipts/measurement-substrate-2026-09-04.md)
+- [`receipts/native-runtime-validation-final-2026-09-04.md`](receipts/native-runtime-validation-final-2026-09-04.md)
+- [`receipts/model-aware-quota-authority-2026-09-04.md`](receipts/model-aware-quota-authority-2026-09-04.md)
