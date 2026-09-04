@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**FOUNDATION COMPLETE ENOUGH FOR INSTALLED-RUNTIME VALIDATION / PRE-ASTRA**
+**FOUNDATION COMPLETE ENOUGH FOR INSTALLED-RUNTIME VALIDATION / PRE-ASTRA PLUS**
 
-The repository remains private while the native Codex path is proven against a real signed-in installation.
+The repository remains private while the native Codex path is proven against a real signed-in installation and Astra continues rolling from Pro into Plus.
 
 ## Locked product direction
 
@@ -41,6 +41,22 @@ Current upstream Codex source provides a strong native integration candidate:
 
 These remain source/protocol findings until reproduced against the installed Codex version used for validation.
 
+## Early Astra Pro field evidence
+
+Astra reached Pro users before the project test Plus account. Early field reports are now tracked in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
+
+Notable reports include:
+
+- Pro 5x / Ultra codebase audit / no subagents: about **10% weekly in 14m22s**.
+- Pro 5x / Medium browser-computer research: about **3% weekly**; the user reported computer use felt at least about 2x as fast as Sol High.
+- Pro 20x / existing 19-microservice gRPC migration: about **5% weekly in 10 minutes**.
+- Purchased-credit / Medium docs + Git branch scan + ~10k-line refactor assessment: **$2.48 equivalent** for the run.
+- Other early users report materially faster task execution, reinforcing that burn must be judged against completed work and rework avoided rather than percentage alone.
+
+These are anecdotal and use different plan denominators. They must not be converted directly into Plus percentages. They do, however, strengthen the hypothesis that project breadth/context, reconnaissance, computer use, reasoning effort, and repeated rediscovery all need to be measured explicitly.
+
+OpenAI currently states that Astra can consume Work/Codex allowance faster than Sol and that task, input/output size, reasoning setting, and Fast mode affect usage. Current flexible-pricing rate cards also show Astra at a materially higher token rate than Sol. This supports CAE's decision to optimize value density rather than prompt count.
+
 ## Implemented foundation
 
 - Exact configured Astra model targeting with strict non-Astra no-op behavior.
@@ -64,14 +80,15 @@ These remain source/protocol findings until reproduced against the installed Cod
 - Prior-art authority in `docs/PRIOR_ART.md`.
 - Installed-runtime execution protocol in `docs/NATIVE_RUNTIME_VALIDATION.md`.
 - Updated integration authority in `docs/CODEX_INTEGRATION_RECON.md`.
+- Early Pro usage research authority in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
 
 ## Validation status
 
-- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 through the current code path before the latest documentation-only commits.
+- Repository/unit integration: **PASS** on GitHub Actions Node 20/22 and Windows Node 22 through the validated setup path.
 - Native installed Codex hook execution: **NOT YET PROVEN**.
 - Signed-in Plus app-server quota read: **NOT YET PROVEN**.
 - Side-by-side app-server read while normal Codex is active: **NOT YET PROVEN**.
-- Native Astra picker/model identity: **BLOCKED UNTIL ASTRA IS AVAILABLE**.
+- Native Astra picker/model identity on Plus: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
 - Astra efficiency improvement: **BLOCKED UNTIL OBSERVE-ONLY BASELINE EXISTS**.
 
 ## Immediate execution queue
@@ -82,14 +99,17 @@ These remain source/protocol findings until reproduced against the installed Cod
 4. Temporarily target one current exact native model only for plumbing proof, then prove another model is a strict no-op and clear the temporary target.
 5. Verify whether quota/model app-server reads coexist cleanly with a normal active Codex session.
 6. Add every observed response variant as a fixture without weakening unknown/conflict handling.
-7. When Astra appears, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity.
-8. Bind receipt before/after quota capture to the validated Astra turn lifecycle without adding a new user workflow.
-9. Run the real-work Plus observe-only baseline immediately.
-10. Test narrowly scoped efficiency interventions only after baseline review.
+7. Continue collecting Pro Astra reports only when plan, task, reasoning, runtime, usage/credits, tools/subagents, or outcome make them useful evidence.
+8. When Astra appears on Plus, run Gate G: native catalog candidate -> model-picker selection -> exact hook model identity.
+9. Bind receipt before/after quota capture to the validated Astra turn lifecycle without adding a new user workflow.
+10. Run the real-work Plus observe-only baseline using workload categories informed by the early Pro evidence: codebase audit, focused implementation, multi-service/refactor work, browser/computer research, and a high-value difficult task.
+11. Test narrowly scoped efficiency interventions only after baseline review.
 
 ## Research posture
 
-Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md`.
+Adjacent projects already cover general quota overlays, Codex usage analytics, multi-provider spend tracking, and broad workflow optimization. CAE remains focused on the distinct intersection of Plus + Astra + native Codex + real-work efficiency. See `docs/PRIOR_ART.md` and `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`.
+
+The current working optimization target is **useful completed work per unit of Astra allowance**, not prompts/week or raw runtime. A future preflight/advisory layer is plausible, but no task-routing or intervention policy should ship before Plus observations exist.
 
 ## Explicitly deferred
 
