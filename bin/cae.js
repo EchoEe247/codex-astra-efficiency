@@ -6,7 +6,7 @@ import { readAccountRateLimits } from "../src/app-server.js";
 import { loadConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
-import { applyHookSetup } from "../src/setup.js";
+import { applyHookSetup, planHookSetup } from "../src/setup.js";
 
 async function readStdin() {
   let data = "";
@@ -29,6 +29,27 @@ function setupSummary(result) {
     applied: result.applied,
     dryRun: Boolean(result.dryRun)
   };
+}
+
+function hookReadiness() {
+  try {
+    const plan = planHookSetup({ action: "install" });
+    return {
+      readable: true,
+      hooksFile: plan.hooksFile,
+      installed: !plan.changed,
+      fileExists: plan.fileExists,
+      error: null
+    };
+  } catch (error) {
+    return {
+      readable: false,
+      hooksFile: null,
+      installed: false,
+      fileExists: null,
+      error: error.message
+    };
+  }
 }
 
 async function main() {
@@ -58,7 +79,8 @@ async function main() {
       stateDir: config.dir,
       configReadable: config.warning === null,
       astraTargetConfigured: config.astraModelIds.length > 0,
-      astraModelIds: config.astraModelIds
+      astraModelIds: config.astraModelIds,
+      nativeHooks: hookReadiness()
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     return;
