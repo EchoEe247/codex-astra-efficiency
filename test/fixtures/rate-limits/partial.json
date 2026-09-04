@@ -1,0 +1,9 @@
+{
+  "ordinaryUsageAllowed": null,
+  "rateLimits": {
+    "limitId": "codex",
+    "planType": "plus",
+    "primary": { "usedPercent": 29, "windowDurationMins": null, "resetsAt": 1788552000 },
+    "secondary": { "usedPercent": 48, "windowDurationMins": 10080, "resetsAt": null }
+  }
+}
