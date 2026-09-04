@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check bin/cae.js && node --check src/config.js && node --check src/hook.js && node --check src/observe.js"
+    "check": "node --check bin/cae.js && node --check src/config.js && node --check src/hook.js && node --check src/observe.js && node --check src/hooks-config.js"
   },
   "engines": {
     "node": ">=20"
