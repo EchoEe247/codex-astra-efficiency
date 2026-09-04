@@ -2,16 +2,19 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 import {
+  CODEX_COMMAND_ENV,
   initializeRequest,
   initializedNotification,
   modelListRequest,
   rateLimitsRequest,
   readAccountRateLimits,
-  readModelList
+  readModelList,
+  resolveCodexCommand
 } from "../src/app-server.js";
 
-function fakeSpawnWithResults(resultsByMethod) {
-  return (_command, args) => {
+function fakeSpawnWithResults(resultsByMethod, expectedCommand = null) {
+  return (command, args) => {
+    if (expectedCommand !== null) assert.equal(command, expectedCommand);
     assert.deepEqual(args, ["app-server", "--listen", "stdio://"]);
 
     const stdin = new PassThrough();
@@ -80,7 +83,31 @@ test("builds the current Codex initialize handshake without a jsonrpc field", ()
   });
 });
 
-test("performs initialize then reads one account rate-limit snapshot", async () => {
+test("resolves explicit, environment, and platform-default Codex launchers conservatively", () => {
+  assert.equal(
+    resolveCodexCommand({ codexCommand: " /custom/codex-wrapper ", env: {}, platform: "linux" }),
+    "/custom/codex-wrapper"
+  );
+  assert.equal(
+    resolveCodexCommand({ env: { [CODEX_COMMAND_ENV]: " /usr/bin/codex " }, platform: "linux" }),
+    "/usr/bin/codex"
+  );
+  assert.equal(resolveCodexCommand({ env: {}, platform: "linux" }), "codex");
+  assert.equal(resolveCodexCommand({ env: {}, platform: "win32" }), "codex.cmd");
+});
+
+test("explicit launcher takes precedence over environment launcher", () => {
+  assert.equal(
+    resolveCodexCommand({
+      codexCommand: "explicit-codex",
+      env: { [CODEX_COMMAND_ENV]: "env-codex" },
+      platform: "linux"
+    }),
+    "explicit-codex"
+  );
+});
+
+test("performs initialize then reads one account rate-limit snapshot through selected launcher", async () => {
   const quota = {
     rateLimits: {
       planType: "plus",
@@ -90,14 +117,28 @@ test("performs initialize then reads one account rate-limit snapshot", async () 
   };
 
   const response = await readAccountRateLimits({
-    codexCommand: "fake-codex",
-    spawnImpl: fakeSpawnWithResults({ "account/rateLimits/read": quota }),
+    codexCommand: "/usr/bin/codex",
+    spawnImpl: fakeSpawnWithResults({ "account/rateLimits/read": quota }, "/usr/bin/codex"),
     timeoutMs: 1000
   });
 
   assert.equal(response.initialized, true);
+  assert.equal(response.command, "/usr/bin/codex");
   assert.deepEqual(response.result, quota);
   assert.equal(response.stderr, null);
+});
+
+test("environment launcher is used by app-server reads when explicit launcher is absent", async () => {
+  const quota = { rateLimits: null };
+  const response = await readAccountRateLimits({
+    env: { [CODEX_COMMAND_ENV]: "/wrapper/codex" },
+    platform: "linux",
+    spawnImpl: fakeSpawnWithResults({ "account/rateLimits/read": quota }, "/wrapper/codex"),
+    timeoutMs: 1000
+  });
+
+  assert.equal(response.command, "/wrapper/codex");
+  assert.deepEqual(response.result, quota);
 });
 
 test("reads the same native model catalog that backs Codex picker discovery", async () => {
@@ -122,7 +163,7 @@ test("reads the same native model catalog that backs Codex picker discovery", as
 
   const response = await readModelList({
     codexCommand: "fake-codex",
-    spawnImpl: fakeSpawnWithResults({ "model/list": catalog }),
+    spawnImpl: fakeSpawnWithResults({ "model/list": catalog }, "fake-codex"),
     timeoutMs: 1000
   });
 
