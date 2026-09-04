@@ -49,6 +49,8 @@ These upstream findings are source-level reconnaissance until reproduced against
 - First-class `not_reported`, `partial`, `malformed`, and `conflicting` rate-limit states.
 - Reset-aware snapshot delta calculation that refuses to call reset-crossing or non-monotonic changes usage burn.
 - Fixture coverage for complete, missing-5h, missing-weekly, partial, malformed, and contradictory responses.
+- Privacy-minimal local run-receipt primitives with start/end quota snapshots, duration, outcome, optional intervention count, and reset-aware usage deltas.
+- Receipt normalization intentionally excludes raw account IDs from the persisted path.
 - Prior-art authority in `docs/PRIOR_ART.md` documenting adjacent quota/usage/optimization projects and CAE's narrower product boundary.
 
 ## Immediate execution queue
@@ -60,7 +62,7 @@ These upstream findings are source-level reconnaissance until reproduced against
 5. Verify whether quota reads coexist cleanly with a normal active Codex session.
 6. Add any observed response variants as fixtures; do not weaken unknown/conflict handling.
 7. Validate clean setup/disable/uninstall ownership of actual user configuration.
-8. Build durable local run-receipt storage around validated before/after snapshots.
+8. Bind receipt start/end capture to validated native Astra turn boundaries without adding a new user workflow.
 9. Wait for actual Astra availability before enabling Astra-specific optimization claims.
 10. Run the real-work Plus baseline immediately when Astra becomes available.
 
