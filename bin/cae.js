@@ -9,6 +9,8 @@ import {
 } from "../src/app-server.js";
 import { loadConfig, parseModelIds, writeConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
+import { checkHookCommand } from "../src/hook-command.js";
+import { CAE_HOOK_COMMAND } from "../src/hooks-config.js";
 import { summarizeAstraDiscovery } from "../src/model-discovery.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
 import { summarizeAstraReadiness } from "../src/readiness.js";
@@ -99,6 +101,7 @@ async function integrationProbe() {
 async function readinessProbe() {
   const codexCommand = resolveCodexCommand();
   const config = loadConfig();
+  const hookCommand = checkHookCommand({ command: CAE_HOOK_COMMAND });
   const [quotaResult, modelResult] = await Promise.allSettled([
     readAccountRateLimits({ codexCommand }),
     readModelList({ codexCommand })
@@ -118,6 +121,7 @@ async function readinessProbe() {
       codexCommand,
       codex: codexVersion(codexCommand),
       nativeHooks: hookReadiness(),
+      hookCommand,
       configReadable: config.warning === null,
       failures,
       meaning: "do_not_spend_astra_until_zero_inference_reads_are_understood"
@@ -132,7 +136,8 @@ async function readinessProbe() {
     ...summarizeAstraReadiness({
       modelPayload: modelResult.value.result,
       rateLimitPayload: quotaResult.value.result,
-      configuredModelIds: config.astraModelIds
+      configuredModelIds: config.astraModelIds,
+      hookCommand
     })
   };
 }
@@ -194,6 +199,7 @@ async function main() {
   if (command === "doctor") {
     const config = loadConfig();
     const codexCommand = resolveCodexCommand();
+    const hookCommand = checkHookCommand({ command: CAE_HOOK_COMMAND });
     const report = {
       node: process.version,
       codexCommand,
@@ -202,7 +208,8 @@ async function main() {
       configReadable: config.warning === null,
       astraTargetConfigured: config.astraModelIds.length > 0,
       astraModelIds: config.astraModelIds,
-      nativeHooks: hookReadiness()
+      nativeHooks: hookReadiness(),
+      hookCommand
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     return;
