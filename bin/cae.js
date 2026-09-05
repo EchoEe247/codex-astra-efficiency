@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  CODEX_VERSION_TIMEOUT_MS,
+  probeCodexVersion,
   readAccountRateLimits,
   readModelList,
   resolveCodexCommand
@@ -22,10 +23,12 @@ async function readStdin() {
   return data;
 }
 
+function codexVersionProbe(command = resolveCodexCommand()) {
+  return probeCodexVersion(command);
+}
+
 function codexVersion(command = resolveCodexCommand()) {
-  const result = spawnSync(command, ["--version"], { encoding: "utf8" });
-  if (result.error || result.status !== 0) return null;
-  return (result.stdout || result.stderr || "").trim() || null;
+  return probeCodexVersion(command).version;
 }
 
 function setupSummary(result) {
@@ -61,6 +64,7 @@ function hookReadiness() {
 
 async function integrationProbe() {
   const codexCommand = resolveCodexCommand();
+  const versionProbe = codexVersionProbe(codexCommand);
   const [quotaResult, modelResult] = await Promise.allSettled([
     readAccountRateLimits({ codexCommand }),
     readModelList({ codexCommand })
@@ -68,7 +72,8 @@ async function integrationProbe() {
 
   return {
     codexCommand,
-    codex: codexVersion(codexCommand),
+    codex: versionProbe.version,
+    codexVersionStatus: versionProbe.status,
     nativeHooks: hookReadiness(),
     quota:
       quotaResult.status === "fulfilled"
@@ -100,6 +105,7 @@ async function integrationProbe() {
 
 async function readinessProbe() {
   const codexCommand = resolveCodexCommand();
+  const versionProbe = codexVersionProbe(codexCommand);
   const config = loadConfig();
   const hookCommand = checkHookCommand({ command: CAE_HOOK_COMMAND });
   const nativeHooks = hookReadiness();
@@ -120,7 +126,8 @@ async function readinessProbe() {
     return {
       status: "native_read_unavailable",
       codexCommand,
-      codex: codexVersion(codexCommand),
+      codex: versionProbe.version,
+      codexVersionStatus: versionProbe.status,
       nativeHooks,
       hookCommand,
       configReadable: config.warning === null,
@@ -131,7 +138,8 @@ async function readinessProbe() {
 
   return {
     codexCommand,
-    codex: codexVersion(codexCommand),
+    codex: versionProbe.version,
+    codexVersionStatus: versionProbe.status,
     nativeHooks,
     configReadable: config.warning === null,
     ...summarizeAstraReadiness({
@@ -201,11 +209,13 @@ async function main() {
   if (command === "doctor") {
     const config = loadConfig();
     const codexCommand = resolveCodexCommand();
+    const versionProbe = codexVersionProbe(codexCommand);
     const hookCommand = checkHookCommand({ command: CAE_HOOK_COMMAND });
     const report = {
       node: process.version,
       codexCommand,
-      codex: codexVersion(codexCommand),
+      codex: versionProbe.version,
+      codexVersionStatus: versionProbe.status,
       stateDir: config.dir,
       configReadable: config.warning === null,
       astraTargetConfigured: config.astraModelIds.length > 0,
@@ -255,6 +265,7 @@ async function main() {
 
   if (command === "quota") {
     const codexCommand = resolveCodexCommand();
+    const versionProbe = codexVersionProbe(codexCommand);
     try {
       const response = await readAccountRateLimits({ codexCommand });
       const normalized = normalizeRateLimitResponse(response.result);
@@ -263,7 +274,8 @@ async function main() {
           {
             available: true,
             codexCommand,
-            codex: codexVersion(codexCommand),
+            codex: versionProbe.version,
+            codexVersionStatus: versionProbe.status,
             source: "codex_app_server",
             quota: normalized
           },
@@ -277,7 +289,8 @@ async function main() {
           {
             available: false,
             codexCommand,
-            codex: codexVersion(codexCommand),
+            codex: versionProbe.version,
+            codexVersionStatus: versionProbe.status,
             source: "codex_app_server",
             error: error.message,
             meaning: "quota_visibility_unavailable_not_zero"

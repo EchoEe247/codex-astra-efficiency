@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 import {
   CODEX_COMMAND_ENV,
+  CODEX_VERSION_TIMEOUT_MS,
   initializeRequest,
   initializedNotification,
+  isWindowsBatch,
   modelListRequest,
+  prepareProcessInvocation,
+  probeCodexVersion,
   rateLimitsRequest,
   readAccountRateLimits,
   readModelList,
@@ -304,4 +311,327 @@ test("rejects when stream closes prematurely", async () => {
   }
   assert.ok(err, "should fail");
   assert.match(err.message, /codex_app_server_closed_before_response/);
+});
+
+test("F1: win32 default codex.cmd uses ComSpec /d /s /c dispatch", () => {
+  const comspec = "C:\\Windows\\System32\\cmd.exe";
+  const inv = prepareProcessInvocation("codex.cmd", ["app-server", "--listen", "stdio://"], {
+    platform: "win32",
+    env: { ComSpec: comspec }
+  });
+  assert.equal(inv.file, comspec);
+  assert.deepEqual(inv.args, ["/d", "/s", "/c", "codex.cmd", "app-server", "--listen", "stdio://"]);
+});
+
+test("F1: explicit C:\\path with spaces\\codex.cmd uses ComSpec and preserves path", () => {
+  const comspec = "C:\\Windows\\System32\\cmd.exe";
+  const shim = "C:\\Program Files\\Codex\\codex.cmd";
+  const inv = prepareProcessInvocation(shim, ["app-server", "--listen", "stdio://"], {
+    platform: "win32",
+    env: { ComSpec: comspec }
+  });
+  assert.equal(inv.file, comspec);
+  assert.equal(inv.args[0], "/d");
+  assert.equal(inv.args[1], "/s");
+  assert.equal(inv.args[2], "/c");
+  assert.equal(inv.args[3], shim);
+  assert.deepEqual(inv.args.slice(4), ["app-server", "--listen", "stdio://"]);
+});
+
+test("F1: Windows .bat launcher routes through ComSpec", () => {
+  const comspec = "C:\\Windows\\System32\\cmd.exe";
+  const batPath = "C:\\tools\\codex.bat";
+  const inv = prepareProcessInvocation(batPath, ["--version"], {
+    platform: "win32",
+    env: { ComSpec: comspec }
+  });
+  assert.equal(inv.file, comspec);
+  assert.deepEqual(inv.args, ["/d", "/s", "/c", batPath, "--version"]);
+});
+
+test("F1: Windows native .exe launcher uses direct process execution", () => {
+  const exePath = "C:\\tools\\codex.exe";
+  const inv = prepareProcessInvocation(exePath, ["app-server", "--listen", "stdio://"], {
+    platform: "win32"
+  });
+  assert.equal(inv.file, exePath);
+  assert.deepEqual(inv.args, ["app-server", "--listen", "stdio://"]);
+});
+
+test("F1: POSIX executable uses direct process execution unchanged", () => {
+  const posixPath = "/usr/local/bin/codex";
+  const inv = prepareProcessInvocation(posixPath, ["app-server", "--listen", "stdio://"], {
+    platform: "linux"
+  });
+  assert.equal(inv.file, posixPath);
+  assert.deepEqual(inv.args, ["app-server", "--listen", "stdio://"]);
+});
+
+test("F1: custom CAE_CODEX_COMMAND is preserved and dispatched correctly", () => {
+  const cmd = resolveCodexCommand({
+    env: { [CODEX_COMMAND_ENV]: "C:\\my tools\\custom-codex.cmd" },
+    platform: "win32"
+  });
+  assert.equal(cmd, "C:\\my tools\\custom-codex.cmd");
+  const inv = prepareProcessInvocation(cmd, ["app-server", "--listen", "stdio://"], {
+    platform: "win32",
+    env: { ComSpec: "C:\\Windows\\cmd.exe" }
+  });
+  assert.equal(inv.file, "C:\\Windows\\cmd.exe");
+  assert.equal(inv.args[3], "C:\\my tools\\custom-codex.cmd");
+});
+
+test("F1: missing ComSpec falls back to cmd.exe on Windows", () => {
+  const inv = prepareProcessInvocation("codex.cmd", ["--version"], {
+    platform: "win32",
+    env: {}
+  });
+  assert.equal(inv.file, "cmd.exe");
+  assert.deepEqual(inv.args, ["/d", "/s", "/c", "codex.cmd", "--version"]);
+});
+
+test("F1: arguments remain safely separated in invocation args array", () => {
+  const args = ["app-server", "--listen", "stdio://", "--param", "value with spaces"];
+  const inv = prepareProcessInvocation("codex.cmd", args, {
+    platform: "win32",
+    env: { ComSpec: "cmd.exe" }
+  });
+  assert.equal(inv.args.length, 3 + 1 + args.length);
+  assert.deepEqual(inv.args.slice(4), args);
+});
+
+test(
+  "end-to-end real Windows .cmd shim launches app-server and answers readAccountRateLimits",
+  { skip: process.platform !== "win32" },
+  async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-win-test-"));
+    try {
+      const shimPath = path.join(tmpDir, "codex-test.cmd");
+      const script = [
+        "@echo off",
+        'if "%1"=="--version" (',
+        "  echo codex 1.2.3",
+        "  exit /b 0",
+        ")",
+        'if "%1"=="app-server" (',
+        '  echo {"id":1,"result":{"clientInfo":{"name":"test"}}}',
+        '  echo {"id":2,"result":{"rateLimits":{"planType":"plus"}}}',
+        "  exit /b 0",
+        ")",
+        "exit /b 1"
+      ].join("\r\n");
+      fs.writeFileSync(shimPath, script);
+
+      const version = probeCodexVersion(shimPath);
+      assert.equal(version.status, "ok");
+      assert.match(version.version, /codex 1\.2\.3/);
+
+      const limits = await readAccountRateLimits({ codexCommand: shimPath });
+      assert.equal(limits.initialized, true);
+      assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+);
+
+test("F2: rejects deterministically on stdin async EPIPE and cleans up child", async () => {
+  let childRef;
+  const spawnImpl = () => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = {
+      stdin,
+      stdout,
+      stderr,
+      killed: false,
+      kill() {
+        this.killed = true;
+      }
+    };
+    childRef = child;
+    queueMicrotask(() => {
+      const err = new Error("write EPIPE");
+      err.code = "EPIPE";
+      stdin.emit("error", err);
+    });
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "test-epipe", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should reject on stdin EPIPE");
+  assert.match(err.message, /^codex_app_server_stream_failed:stdin:EPIPE/);
+  assert.equal(childRef.killed, true);
+});
+
+test("F2: rejects deterministically on stdout async error", async () => {
+  let childRef;
+  const spawnImpl = () => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = {
+      stdin,
+      stdout,
+      stderr,
+      killed: false,
+      kill() {
+        this.killed = true;
+      }
+    };
+    childRef = child;
+    queueMicrotask(() => {
+      const err = new Error("read ECONNRESET");
+      err.code = "ECONNRESET";
+      stdout.emit("error", err);
+    });
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "test-stdout-err", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should reject on stdout error");
+  assert.match(err.message, /^codex_app_server_stream_failed:stdout:ECONNRESET/);
+  assert.equal(childRef.killed, true);
+});
+
+test("F2: rejects deterministically on stderr async error", async () => {
+  let childRef;
+  const spawnImpl = () => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = {
+      stdin,
+      stdout,
+      stderr,
+      killed: false,
+      kill() {
+        this.killed = true;
+      }
+    };
+    childRef = child;
+    queueMicrotask(() => {
+      const err = new Error("read EIO");
+      err.code = "EIO";
+      stderr.emit("error", err);
+    });
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "test-stderr-err", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should reject on stderr error");
+  assert.match(err.message, /^codex_app_server_stream_failed:stderr:EIO/);
+  assert.equal(childRef.killed, true);
+});
+
+test("F2: multiple stream errors settle exactly once without uncaught process errors", async () => {
+  let childRef;
+  const spawnImpl = () => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = {
+      stdin,
+      stdout,
+      stderr,
+      killed: false,
+      kill() {
+        this.killed = true;
+      }
+    };
+    childRef = child;
+    queueMicrotask(() => {
+      const err1 = new Error("write EPIPE");
+      err1.code = "EPIPE";
+      stdin.emit("error", err1);
+
+      const err2 = new Error("read ECONNRESET");
+      err2.code = "ECONNRESET";
+      stdout.emit("error", err2);
+
+      const err3 = new Error("stderr error");
+      err3.code = "EIO";
+      stderr.emit("error", err3);
+    });
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "test-multi-err", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should reject once");
+  assert.match(err.message, /^codex_app_server_stream_failed:stdin:EPIPE/);
+});
+
+test("F4: normal version probe succeeds and returns parsed version", () => {
+  const spawnSyncImpl = (file, args) => {
+    assert.deepEqual(args, ["--version"]);
+    return { status: 0, stdout: "codex-cli 0.153.2\n", stderr: "", error: null };
+  };
+  const res = probeCodexVersion("codex", { spawnSyncImpl });
+  assert.equal(res.status, "ok");
+  assert.equal(res.version, "codex-cli 0.153.2");
+});
+
+test("F4: nonzero version exit returns null version with status nonzero_exit", () => {
+  const spawnSyncImpl = () => ({ status: 1, stdout: "", stderr: "unknown option", error: null });
+  const res = probeCodexVersion("codex", { spawnSyncImpl });
+  assert.equal(res.status, "nonzero_exit");
+  assert.equal(res.version, null);
+  assert.equal(res.exitCode, 1);
+});
+
+test("F4: missing launcher returns spawn_error with null version", () => {
+  const spawnSyncImpl = () => {
+    const err = new Error("spawn ENOENT");
+    err.code = "ENOENT";
+    return { error: err };
+  };
+  const res = probeCodexVersion("missing-codex", { spawnSyncImpl });
+  assert.equal(res.status, "spawn_error");
+  assert.equal(res.version, null);
+});
+
+test("F4: timed-out launcher returns timeout status and completes boundedly", () => {
+  const spawnSyncImpl = (file, args, options) => {
+    assert.ok(options.timeout <= 5000);
+    const err = new Error("spawnSync ETIMEDOUT");
+    err.code = "ETIMEDOUT";
+    return { error: err };
+  };
+  const res = probeCodexVersion("hang-codex", { spawnSyncImpl, timeoutMs: 50 });
+  assert.equal(res.status, "timeout");
+  assert.equal(res.version, null);
+});
+
+test("F4: signal termination returns signal status with null version", () => {
+  const spawnSyncImpl = () => ({ status: null, signal: "SIGTERM", stdout: "", stderr: "" });
+  const res = probeCodexVersion("signal-codex", { spawnSyncImpl });
+  assert.equal(res.status, "signal");
+  assert.equal(res.signal, "SIGTERM");
+  assert.equal(res.version, null);
+});
+
+test("F4: CODEX_VERSION_TIMEOUT_MS constant is in 3000-5000 ms range", () => {
+  assert.ok(CODEX_VERSION_TIMEOUT_MS >= 3000, "at least 3000ms");
+  assert.ok(CODEX_VERSION_TIMEOUT_MS <= 5000, "at most 5000ms");
 });

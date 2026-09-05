@@ -32,6 +32,59 @@ function summarizeAuthority(authority) {
   };
 }
 
+export function evaluateMeasurementReadiness(authority) {
+  if (!authority || typeof authority !== "object" || authority.status !== "selected") {
+    return {
+      status: "unresolved",
+      fiveHourVisibility: authority?.fiveHour?.status ?? "unavailable",
+      weeklyVisibility: authority?.weekly?.status ?? "unavailable",
+      fiveHourDeltaReady: false,
+      weeklyDeltaReady: false,
+      deltaReady: false,
+      reason: authority?.reason ?? "authority_unresolved"
+    };
+  }
+
+  const fiveHour = authority.fiveHour;
+  const weekly = authority.weekly;
+
+  const fiveHourUsable = fiveHour?.status === "reported" && typeof fiveHour?.usedPercent === "number";
+  const weeklyUsable = weekly?.status === "reported" && typeof weekly?.usedPercent === "number";
+
+  const fiveHourDeltaReady = fiveHourUsable && typeof fiveHour?.resetsAt === "number";
+  const weeklyDeltaReady = weeklyUsable && typeof weekly?.resetsAt === "number";
+  const deltaReady = fiveHourDeltaReady && weeklyDeltaReady;
+
+  let status;
+  let reason = null;
+
+  if (fiveHourUsable && weeklyUsable && deltaReady) {
+    status = "ready";
+  } else if (fiveHourUsable || weeklyUsable) {
+    status = "degraded";
+    if (!fiveHourUsable) {
+      reason = "five_hour_window_missing_or_malformed";
+    } else if (!weeklyUsable) {
+      reason = "weekly_window_missing_or_malformed";
+    } else {
+      reason = "reset_boundary_information_incomplete";
+    }
+  } else {
+    status = "unavailable";
+    reason = "no_usable_quota_windows_reported";
+  }
+
+  return {
+    status,
+    fiveHourVisibility: fiveHour?.status ?? "not_reported",
+    weeklyVisibility: weekly?.status ?? "not_reported",
+    fiveHourDeltaReady,
+    weeklyDeltaReady,
+    deltaReady,
+    reason
+  };
+}
+
 /**
  * Summarize the zero-inference state needed immediately before a live Astra
  * hook check. This function never mutates CAE configuration or Codex state.
@@ -84,17 +137,37 @@ export function summarizeAstraReadiness({
   const candidate = discovery.candidates[0];
   const targetConfigured = configured.some((model) => sameModel(model, candidate.model));
   const authority = summarizeAuthority(selectUsageAuthority(quota, candidate.model));
+  const measurementReadiness = evaluateMeasurementReadiness(authority);
 
-  let status = "ready_for_live_hook_capture";
-  if (!targetConfigured) status = "target_configuration_required";
-  else if (authority.status !== "selected") status = "quota_authority_unresolved";
-  else if (hookCommand && hookCommand.available !== true) {
+  let status;
+  if (!targetConfigured) {
+    status = "target_configuration_required";
+  } else if (authority.status !== "selected") {
+    status = "quota_authority_unresolved";
+  } else if (hookCommand && hookCommand.available !== true) {
     status = HOOK_COMMAND_UNAVAILABLE;
   } else if (nativeHooks && nativeHooks.readable !== true) {
     status = "native_hooks_unavailable";
   } else if (nativeHooks && nativeHooks.installed !== true) {
     status = "native_hooks_not_installed";
+  } else if (measurementReadiness.status === "unavailable") {
+    status = "quota_measurements_unavailable";
+  } else if (measurementReadiness.status === "degraded") {
+    status = "quota_measurements_degraded";
+  } else {
+    status = "ready_for_live_hook_capture";
   }
+
+  const nextActionMap = {
+    target_configuration_required: `cae target set ${candidate.model}`,
+    ready_for_live_hook_capture: "select Astra in native /model and capture live hook identity",
+    [HOOK_COMMAND_UNAVAILABLE]: "repair the CAE hook command installation before live capture",
+    native_hooks_unavailable: "repair/read the native Codex hook configuration before live capture",
+    native_hooks_not_installed: "run cae setup and complete native Codex hook review before live capture",
+    quota_authority_unresolved: "resolve quota authority before interpreting Astra usage deltas",
+    quota_measurements_unavailable: "refresh account rate limits or verify Codex quota window visibility before live capture",
+    quota_measurements_degraded: "review degraded quota window visibility before live capture"
+  };
 
   const result = {
     status,
@@ -103,18 +176,8 @@ export function summarizeAstraReadiness({
     configuredModelIds: configured,
     resetCreditsAvailable: quota.resetCreditsAvailable,
     authority,
-    nextAction:
-      status === "target_configuration_required"
-        ? `cae target set ${candidate.model}`
-        : status === "ready_for_live_hook_capture"
-          ? "select Astra in native /model and capture live hook identity"
-          : status === HOOK_COMMAND_UNAVAILABLE
-            ? "repair the CAE hook command installation before live capture"
-            : status === "native_hooks_unavailable"
-              ? "repair/read the native Codex hook configuration before live capture"
-              : status === "native_hooks_not_installed"
-                ? "run cae setup and complete native Codex hook review before live capture"
-                : "resolve quota authority before interpreting Astra usage deltas"
+    measurementReadiness,
+    nextAction: nextActionMap[status] ?? "resolve quota authority before interpreting Astra usage deltas"
   };
   if (hookCommand !== null) result.hookCommand = hookCommand;
   if (nativeHooks !== null) result.nativeHooks = nativeHooks;

@@ -38,6 +38,29 @@ export function loadConfig(env = process.env) {
     }
   }
 
+  // Validate parsed JSON structure BEFORE dereference.
+  if (fileConfig === null || typeof fileConfig !== "object" || Array.isArray(fileConfig)) {
+    return {
+      dir,
+      configPath,
+      astraModelIds: parseModelIds(env.CAE_ASTRA_MODEL_IDS),
+      warning: "config_invalid_shape:expected_object"
+    };
+  }
+
+  if (
+    fileConfig.astraModelIds !== undefined &&
+    (!Array.isArray(fileConfig.astraModelIds) ||
+      !fileConfig.astraModelIds.every((item) => typeof item === "string"))
+  ) {
+    return {
+      dir,
+      configPath,
+      astraModelIds: parseModelIds(env.CAE_ASTRA_MODEL_IDS),
+      warning: "config_invalid_shape:invalid_astra_model_ids"
+    };
+  }
+
   const envIds = parseModelIds(env.CAE_ASTRA_MODEL_IDS);
   const fileIds = parseModelIds(fileConfig.astraModelIds);
 
