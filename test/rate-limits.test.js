@@ -197,6 +197,19 @@ test("does not use a default quota snapshot explicitly assigned to another model
   assert.equal(authority.reason, "default_targets_other_model");
 });
 
+test("treats a limitId change as an authority change even when kind and key match", () => {
+  const startPayload = modelSpecificPayload(10, 20);
+  const endPayload = modelSpecificPayload(17, 24);
+  endPayload.rateLimitsByLimitId.astra_meter.limitId = "astra_meter_rotated";
+  const start = normalizeRateLimitResponse(startPayload);
+  const end = normalizeRateLimitResponse(endPayload);
+
+  const delta = calculateModelUsageDelta(start, end, "gpt-6-astra");
+  assert.equal(delta.authority.status, "authority_changed");
+  assert.equal(delta.fiveHour.status, "unavailable");
+  assert.equal(delta.weekly.status, "unavailable");
+});
+
 test("does not call a reset-crossing change usage burn", () => {
   assert.deepEqual(
     calculateWindowDelta(

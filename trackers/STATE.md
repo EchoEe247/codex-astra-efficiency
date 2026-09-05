@@ -1,12 +1,14 @@
 # Project State
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Current phase
 
-**ASTRA LIVE / WINDOW 0 READY FOR LIVE HOOK CAPTURE**
+**WINDOW 0 TASK 1 COMPLETE / NON-ASTRA HARDENING**
 
-The zero-inference preflight passed in the known-good `codexu` Ubuntu-under-Termux runtime. The production Astra identity and current Plus quota authority are now known from native Codex app-server data. No Astra inference or banked reset was consumed by the preflight.
+Task 1 outcome: PARTIAL. 5h burn 7pt (93 -> 86), weekly burn 1pt (17 -> 16). Hooks captured 0 events despite installed config. limitId defect confirmed via Astra finding. No banked reset consumed. Task 2 BLOCKED pending hook-path revalidation.
+
+Receipt: `receipts/window-0-live-task-1-2026-09-04.md`.
 
 ## Locked product direction
 
@@ -131,6 +133,34 @@ Pre-launch planning assumed Medium as a conservative starting point. Native disc
 Window 0 should therefore begin the first real task at the native default `low`, not silently override the product default to Medium. Escalation to `medium` or above should occur only when the task demonstrates a concrete reasoning limitation. `xhigh`, `max`, and `ultra` are not burn-probe settings and should not be selected merely to measure consumption.
 
 This keeps the first live CAE shakedown representative of how ordinary Codex users encounter Astra.
+
+## Hardening after Task 1 (non-Astra, 2026-09-05)
+
+Root causes found without any model inference:
+
+1. Hook PATH/exec gap: hook command `cae hook --cae-owned` resolved inside
+   codexu to a global install whose `bin/cae.js` carried mode 600, so the
+   sandboxed hook handler could not execute (permission denied). Absolute-path
+   `node ./bin/cae.js hook` worked; bare `cae` failed before chmod 755 and
+   passed after, in both Termux and Ubuntu. Session log shows no hook dispatch
+   entries, consistent with handler launch failure rather than an Astra defect.
+2. limitId stability: `calculateModelUsageDelta` treated kind+key match as
+   stable even when `limitId` changed. Fixed to also invalidate on limitId
+   change, with a regression test.
+3. Sandbox 182: both Astra patch attempts failed as
+   `apply_patch verification failed ... fs sandbox helper failed with status
+   exit status: 182` when reading/writing the Android-mounted workspace path
+   `/data/data/com.termux/files/home/codex-astra-efficiency`. Reads and exec
+   worked; only sandboxed file writes failed. Disposable rootfs clone prepared
+   at `/root/work/codex-astra-efficiency` for future live validation.
+
+Product gap recorded: `node ./bin/cae.js setup` reported hooks installed
+without proving the configured hook executable callable. Recommended minimal
+pre-Window-1 change: `cae doctor`/`readiness` must verify the configured hook
+command resolves and is executable.
+
+Task 2 remains BLOCKED pending one minimal live revalidation turn from the
+rootfs workspace after hook-path fix.
 
 ## Immediate execution queue
 
