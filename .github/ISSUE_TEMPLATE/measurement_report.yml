@@ -1,0 +1,65 @@
+name: Usage or measurement report
+description: Report a suspicious Astra quota/token/receipt measurement without sharing private task content
+title: "[Measurement] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for quota, token-accounting, reset-boundary, or receipt anomalies. Do not paste prompts, source code, transcripts, credentials, account identifiers, or raw native session/turn ids.
+  - type: input
+    id: cae-version
+    attributes:
+      label: CAE version or commit
+    validations:
+      required: true
+  - type: input
+    id: codex-version
+    attributes:
+      label: Codex version
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform/runtime
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model and reasoning level
+      placeholder: gpt-6-astra / low
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized-observation
+    attributes:
+      label: Sanitized observation
+      description: Include numeric quota/token/context values, timestamps, reset epochs, CAE status/reason fields, and opaque CAE correlation keys when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What looked wrong?
+      description: Explain why the measurement appears inconsistent or misleading.
+    validations:
+      required: true
+  - type: dropdown
+    id: reset-crossing
+    attributes:
+      label: Did a 5-hour or weekly reset occur between the compared snapshots?
+      options:
+        - No
+        - Yes
+        - Unknown
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed raw prompts/responses, source code, cwd/repository paths, account identity, credentials, and raw native session/turn ids.
+          required: true
