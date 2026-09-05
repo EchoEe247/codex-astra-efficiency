@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**PRE-ASTRA NATIVE RUNTIME VALIDATION PASS / ASTRA PLUS LAUNCH WAIT**
+**ASTRA LIVE ON TEST PLUS ACCOUNT / WINDOW 0 PRE-RELEASE SHAKEDOWN PREP**
 
-The repository remains private while Astra continues rolling from Pro into Plus and the final launcher-compatibility improvement is revalidated on the Termux test environment.
+The repository remains private while the current Codex runtime is revalidated, the exact production Astra identity/quota shape is captured, and the first partial-allowance shakedown is prepared.
 
 ## Locked product direction
 
@@ -19,14 +19,38 @@ The repository remains private while Astra continues rolling from Pro into Plus 
 - CAE must not manage or modify behavior for non-Astra models.
 - Core v0.x does not silently route Astra work to cheaper models.
 - Efficiency means reducing avoidable Astra burn while preserving useful real work.
-- Observe-only baseline precedes optimization.
+- Product-first testing: CAE is tested with Astra from the start; a bounded pass-through/control segment precedes any promoted optimization default.
 - 5-hour and weekly limits are separate authorities when exposed.
 - Missing rate-limit data is unknown, never guessed.
 - Local-first privacy is mandatory.
 
+## Astra Plus availability checkpoint
+
+Operator observation on 2026-09-04:
+
+- Astra appeared in the native `/model` picker on the test ChatGPT Plus account at approximately 18:44 Central Time.
+- A later `/status` screenshot at approximately 19:41 Central Time showed Codex `0.153.2`, active Sol High, 99% of the 5-hour allowance remaining, 18% weekly remaining, and two usage-limit resets available.
+- The screenshot does not establish the exact Astra model id or Astra-specific quota-authority shape because Astra was not active in it.
+
+Authority: `receipts/astra-plus-availability-observation-2026-09-04.md`.
+
+Astra rollout waiting is therefore no longer the blocker. The immediate blocker is **current-version live integration capture and Window 0 readiness**.
+
+## Campaign policy
+
+Three stages are planned, but only two clean serious 5-hour campaigns:
+
+1. **Window 0:** use only the currently remaining allowance before any banked reset to prove live Astra identity, quota authority, hooks, receipts, and bounded product work.
+2. **Window 1:** after fixes/hardening, use one banked reset for a clean early-release campaign beginning from a documented full allowance state.
+3. **Window 2:** after another hardening phase, wait for the next normal 5-hour availability and run release-candidate validation.
+
+The second banked reset is intentionally not part of the release-test sequence.
+
+Operational authority: `docs/ASTRA_WINDOW_0_SHAKEDOWN.md` and `docs/ASTRA_PLUS_TEST_PLAN.md`.
+
 ## Native runtime validation authority
 
-`receipts/native-runtime-validation-final-2026-09-04.md` is the authoritative A-F runtime receipt.
+`receipts/native-runtime-validation-final-2026-09-04.md` remains the authoritative A-F runtime receipt for Codex `0.149.0`.
 
 Validated environment:
 
@@ -49,22 +73,36 @@ Live Gate D proved `UserPromptSubmit` + `Stop` for exact model `gpt-5.6-sol`, st
 
 The native first-run hook trust gate (`Hooks need review / Trust all`) is a real product UX requirement. CAE must not bypass Codex trust controls.
 
-## Real Plus quota shape observed
+## Current-version drift gate
 
-The signed-in Plus account exposed:
+The test environment now reports Codex `0.153.2`, newer than the authoritative `0.149.0` A-F validation.
+
+Before any Astra inference, re-run on the current runtime:
+
+```text
+npm test
+npm run check
+CAE_CODEX_COMMAND=/usr/bin/codex cae doctor
+CAE_CODEX_COMMAND=/usr/bin/codex cae probe
+CAE_CODEX_COMMAND=/usr/bin/codex cae quota
+```
+
+Do not assume app-server, model-list, hook, or launcher behavior is unchanged merely because the previous version passed.
+
+## Previous Plus quota shape observed
+
+The earlier signed-in Plus account state on Codex `0.149.0` exposed:
 
 - 300-minute 5-hour window;
 - 10,080-minute weekly window;
 - one shared/default `codex` quota bucket;
 - `normalModelSlug=null`;
-- no model-specific quota bucket in the observed account state;
+- no model-specific quota bucket in that observed state;
 - purchased-credit snapshot with `hasCredits=false`, `unlimited=false`, balance `"0"`;
 - reset-credit summary;
-- Astra absent from the native catalog (`not_found`).
+- Astra absent from the catalog at that time.
 
-Because the observed meter is shared/default, controlled Astra baseline experiments must avoid concurrent Codex usage unless launch-time data exposes a dedicated Astra bucket.
-
-Catalog contents and reset-credit counts changed naturally between reads, so both are treated as dynamic observations rather than constants.
+That quota shape is historical evidence, not authority for the newly available Astra runtime. Window 0 must capture the launch-time Astra shape again.
 
 ## Termux launcher compatibility
 
@@ -75,7 +113,7 @@ Runtime validation found one portability issue:
 
 Issue #6 tracks this as launcher equivalence rather than an auth/protocol problem.
 
-Implementation is now in progress/current main:
+Implemented:
 
 - `CAE_CODEX_COMMAND` can select the same executable/wrapper the user normally launches;
 - explicit programmatic selection takes precedence over the environment override;
@@ -83,7 +121,7 @@ Implementation is now in progress/current main:
 - the same resolved launcher is used for app-server reads and Codex version reporting;
 - the value is treated as one executable path/name, not a shell command.
 
-This launcher change still requires CI completion and one local Termux revalidation before Issue #6 can close.
+Issue #6 remains open until `cae doctor`, `cae probe`, and `cae quota` pass locally through `/usr/bin/codex` on the current Termux/Codex runtime.
 
 ## Technical foundation
 
@@ -107,40 +145,34 @@ Implemented:
 - early Astra Pro usage evidence in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`;
 - prior-art authority in `docs/PRIOR_ART.md`.
 
-## Early Astra Pro evidence
-
-Pro field reports remain research inputs, not Plus conversion formulas. Notable observations include high burn for broad audits, multi-service work, browser/computer research, and project-state/refactor assessment even when elapsed time is short.
-
-The project therefore continues optimizing for:
-
-**useful completed work per unit of Astra allowance**
-
-—not prompt count or wall-clock duration.
-
 ## Validation status
 
-- Cross-platform unit/source CI before launcher change: **PASS** on Ubuntu Node 20, Ubuntu Node 22, Windows Node 22.
-- Real installed Codex A-F runtime validation: **PASS** on Termux/Codex 0.149.0.
-- Signed-in Plus app-server quota read: **PASS** through the user's working wrapper path.
-- Side-by-side app-server read with active Codex: **PASS**.
-- Live exact-target hook observation: **PASS**.
-- Live non-target strict no-op: **PASS**.
-- Setup ownership/uninstall: **PASS**.
-- Launcher override implementation: **CODE COMPLETE; CI/RUNTIME REVALIDATION PENDING**.
-- Native Astra picker/model identity on Plus: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
-- Native Astra quota-authority shape: **BLOCKED UNTIL ASTRA IS AVAILABLE ON THE TEST ACCOUNT**.
-- Astra efficiency improvement: **BLOCKED UNTIL OBSERVE-ONLY BASELINE EXISTS**.
+- Cross-platform unit/source CI on main before Window 0 prep: **PASS** on Ubuntu Node 20, Ubuntu Node 22, Windows Node 22.
+- macOS Node 22 CI: **ADDED ON WINDOW-0 PREP BRANCH; MUST PASS BEFORE MERGE**.
+- Real installed Codex A-F runtime validation: **PASS on Termux/Codex 0.149.0; CURRENT 0.153.2 REVALIDATION REQUIRED**.
+- Signed-in Plus app-server quota read: **PASS historically through the working wrapper; current-version revalidation required**.
+- Side-by-side app-server read with active Codex: **PASS on 0.149.0**.
+- Live exact-target hook observation: **PASS on Sol target; production Astra target still requires live capture**.
+- Live non-target strict no-op: **PASS on 0.149.0; repeat around Astra Window 0**.
+- Setup ownership/uninstall: **PASS on 0.149.0**.
+- Launcher override implementation: **CODE/CI PASS; TERMUX CURRENT-RUNTIME ACCEPTANCE PENDING**.
+- Astra visible in native picker on Plus: **OPERATOR OBSERVED**.
+- Exact native Astra picker/runtime identity: **READY TO CAPTURE**.
+- Native Astra quota-authority shape: **READY TO CAPTURE**.
+- Astra efficiency improvement: **NOT YET CLAIMED**.
 
 ## Immediate execution queue
 
-1. Finish CI for the launcher override implementation.
-2. Revalidate on Termux using `CAE_CODEX_COMMAND=/usr/bin/codex` with `cae doctor`, `cae probe`, and `cae quota`; close Issue #6 only if the native commands now work without the previous manual workaround.
-3. Keep collecting Pro Astra reports only when plan, task, reasoning, runtime, usage/credits, tools/subagents, or outcome make them useful evidence.
-4. When Astra appears on Plus, run Gate G: native catalog candidate -> picker/active model identity -> exact hook identity -> quota-authority selection.
-5. Bind receipt before/after quota capture to the validated Astra turn lifecycle without creating a new user workflow.
-6. Run the real-work Plus observe-only baseline from `docs/ASTRA_PLUS_TEST_PLAN.md`.
-7. Test narrowly scoped efficiency interventions only after baseline review.
-8. Ship v0.1 as soon as the evidence gate is satisfied; prefer an honest observability-first release over unvalidated efficiency claims.
+1. Merge Window 0 preparation only after Ubuntu/Windows/macOS CI passes.
+2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `cae doctor`, `cae probe`, and `cae quota`.
+3. Close Issue #6 only if that local launcher acceptance passes without the previous manual workaround.
+4. Run Gate G without spending unnecessary Astra inference: native catalog candidate -> exact target config -> native picker/active model identity -> exact hook identity -> quota-authority selection.
+5. Run Window 0 according to `docs/ASTRA_WINDOW_0_SHAKEDOWN.md` using only the remaining pre-reset allowance.
+6. Turn Astra off; fix/harden with Sol/Luna/Hermes/CI.
+7. Freeze the Window 1 candidate, then use one banked reset for the clean early-release campaign.
+8. After Window 1, harden again without Astra.
+9. Wait for the next normal 5-hour availability and run Window 2 release-candidate validation.
+10. Publish v0.1 only after `docs/RELEASE_CRITERIA.md` passes.
 
 ## Explicitly deferred
 
@@ -155,4 +187,4 @@ The project therefore continues optimizing for:
 
 ## Release posture
 
-CAE is now **Astra-ready at the native integration layer**. The remaining launch blocker is actual Astra availability on the Plus test account, plus completion of the small launcher portability revalidation.
+CAE is **Astra-live but not yet Astra-validated**. The native foundation is strong enough to begin the controlled Window 0 shakedown once current-version compatibility and launcher acceptance are confirmed.
