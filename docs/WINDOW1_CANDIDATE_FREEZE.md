@@ -9,18 +9,23 @@ Pre-Window-1 hardening branch: `pre-window1/candidate-freeze` (PR #13).
   local suite 85/84/0/1; npm run check PASS; worktree clean on both the
   Termux-side and rootfs checkouts).
 - Candidate: the FINAL TESTED DOCUMENTATION COMMIT on main that records this
-  freeze (this commit), pinned exactly by branch **`window1/candidate`**.
-  A commit cannot embed its own hash, so the exact candidate SHA is recorded
-  in the Issue #5 coordination comment and equals the `window1/candidate`
-  branch head at all times. No commits may be added to `window1/candidate`
-  afterward.
+  freeze, pinned by branch **`window1/candidate`**.
+- Original frozen candidate SHA: `2025274d51b082c0bdbb96a0d8106f3df28ac45b`.
+- **STATUS UPDATE:** a post-freeze/pre-reset Astra audit later confirmed a
+  release-critical readiness defect in this candidate: `cae readiness` can
+  report `ready_for_live_hook_capture` even when the CAE native hooks are not
+  installed, because `readinessProbe()` reports `nativeHooks` separately but
+  `summarizeAstraReadiness()` does not gate the status on that native-hook
+  installation state. The original candidate is therefore **not authorized for
+  the Window 1 reset/control until this defect is fixed, regression-covered,
+  cross-platform green, and a replacement candidate is frozen**. The banked
+  reset remains unspent.
 
 ## Candidate contract
 
 - MODEL: `gpt-6-astra` (exact native id observed in Window 0).
 - DEFAULT REASONING: `low` (production native default; supersedes the old
-  Issue #5 "Start at Medium" wording — see coordination comment
-  https://github.com/EchoEe247/codex-astra-efficiency/issues/5#issuecomment-5551813334).
+  Issue #5 "Start at Medium" wording).
 - MODEL SELECTION: native `/model` only. No routing, no substitution.
 - FAST: off if explicitly available; otherwise record UNKNOWN.
 - SUBAGENTS: normal task behavior may be allowed only according to the
@@ -33,8 +38,7 @@ Pre-Window-1 hardening branch: `pre-window1/candidate-freeze` (PR #13).
   an intervention be considered. No speculative "optimization" by default.
 - PRIVACY: local only; no raw prompt/source/transcript/account identity.
 - QUOTA: 5h and weekly separate; reset crossing => UNAVAILABLE rather than
-  guessed; authority must remain stable (shared_default/default/limitId=codex
-  expected; any change invalidates the delta per `calculateModelUsageDelta`).
+  guessed; authority must remain stable.
 - RUNTIME: ubuntu_in_termux / codexu; workspace `/root/work/codex-astra-efficiency`.
 - RESET POLICY: exactly one banked reset planned for Window 1; the second
   banked reset remains untouched and is not part of the release-test sequence.
@@ -66,20 +70,14 @@ A qualifying control task must be:
 ## Window 0 measurement corrections carried into this freeze
 
 - Task 2 5h burn: UNAVAILABLE — RESET_CROSSED / NO SAME-WINDOW PRE-TURN
-  BASELINE (receipt `receipts/window-0-task-2-2026-09-05.md`).
-- Task 2 weekly burn: 1pt (epoch 1788793830 stable).
+  BASELINE.
+- Task 2 weekly burn: 1pt.
 - Sandbox 182: INTERMITTENT CODEX/RUNTIME TOOL FAILURE — RECOVERED, NOT
   RELEASE-BLOCKING; rootfs writes validated; read-side 182 not eliminated,
   not proven a CAE defect.
 
-## Release-criteria status at freeze
+## Release-criteria status at original freeze
 
-30 of 46 boxes checked as PROVEN (native workflow 3/6, visibility 7/7,
-campaign evidence 5/10, efficiency 0/7 by design — no optimization is
-default-enabled, privacy 6/6, reliability 9/10). Remaining release-critical
-gaps: A (public install/uninstall docs), C (unsupported Codex-version
-behavior), E (normal permissions/tools/plan workflow compatibility) are
-WINDOW_1_REQUIRED; B (live non-Astra no-op) and D (hostile state-dir edges
-beyond fixtures) are WINDOW_1 candidates; the two Window 2 boxes and seven
-efficiency-claim boxes are intentionally open pending their windows.
-Full audit: `docs/RELEASE_CRITERIA.md`.
+30 of 46 boxes checked as PROVEN. The post-freeze audit adds a confirmed
+release-critical readiness defect that must be corrected before Window 1
+reset/control. No Astra efficiency claim is validated or enabled.
