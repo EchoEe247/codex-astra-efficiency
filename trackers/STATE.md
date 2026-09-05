@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**ASTRA LIVE ON TEST PLUS ACCOUNT / WINDOW 0 ZERO-INFERENCE TERMUX GATE**
+**ASTRA LIVE / WINDOW 0 READY FOR LIVE HOOK CAPTURE**
 
-Window 0 preparation is merged. The repository remains private while the current Codex runtime is revalidated locally, the exact production Astra identity/quota shape is captured, and the first partial-allowance shakedown is gated.
+The zero-inference preflight passed in the known-good `codexu` Ubuntu-under-Termux runtime. The production Astra identity and current Plus quota authority are now known from native Codex app-server data. No Astra inference or banked reset was consumed by the preflight.
 
 ## Locked product direction
 
@@ -14,174 +14,140 @@ Window 0 preparation is merged. The repository remains private while the current
 - Codex first.
 - Astra only.
 - Everyday Codex users through professional developers are the primary audience.
-- Native Codex workflow must remain recognizable and simple.
-- Users select Astra through the normal Codex model picker.
-- CAE must not manage or modify behavior for non-Astra models.
+- Preserve native Codex model selection and normal agent workflow.
+- CAE must remain a strict no-op for non-Astra models.
 - Core v0.x does not silently route Astra work to cheaper models.
 - Efficiency means reducing avoidable Astra burn while preserving useful real work.
-- Product-first testing: CAE is tested with Astra from the start; a bounded pass-through/control segment precedes any promoted optimization default.
-- 5-hour and weekly limits are separate authorities when exposed.
-- Missing rate-limit data is unknown, never guessed.
+- Product-first testing: test CAE with Astra, not Astra in isolation.
+- 5-hour and weekly windows are measured separately.
+- Missing or ambiguous quota data stays unknown; never guess.
 - Local-first privacy is mandatory.
 
-## Astra Plus availability checkpoint
+## Live Astra authority
 
-Operator observation on 2026-09-04:
+Zero-inference preflight authority:
 
-- Astra appeared in the native `/model` picker on the test ChatGPT Plus account at approximately 18:44 Central Time.
-- A later `/status` screenshot at approximately 19:41 Central Time showed Codex `0.153.2`, active Sol High, 99% of the 5-hour allowance remaining, 18% weekly remaining, and two usage-limit resets available.
-- The screenshot does not establish the exact Astra model id or Astra-specific quota-authority shape because Astra was not active in it.
+- runtime: `ubuntu_in_termux / codexu`;
+- Codex: `0.153.2`;
+- working launcher: `/root/.local/bin/codex`;
+- exact native Astra model id: `gpt-6-astra`;
+- native display name: `GPT-6-Astra`;
+- native default reasoning: `low`;
+- supported reasoning: `low`, `medium`, `high`, `xhigh`, `max`, `ultra`;
+- model catalog: complete, 6 entries, one Astra candidate;
+- Plus quota authority: `shared_default`;
+- `limitId=codex`;
+- `normalModelSlug=null`;
+- preflight 5-hour remaining: 96%;
+- preflight weekly remaining: 18%;
+- reset credits available: 2;
+- banked resets consumed by preflight: 0.
 
-Authority: `receipts/astra-plus-availability-observation-2026-09-04.md`.
+Receipt: `receipts/window-0-zero-inference-preflight-codexu-2026-09-04.md`.
 
-Astra rollout waiting is therefore no longer the blocker. The immediate blocker is **current-version local zero-inference acceptance and live integration capture**.
+The shared-default authority means unrelated Codex work on the same account can contaminate Window 0 deltas. Keep other Codex usage idle during controlled Astra tasks.
+
+## Runtime distinction
+
+### Authoritative Window 0 runtime
+
+`codexu` is an alias that enters Ubuntu 24.04.4 under Termux/PRoot and directly executes `/root/.local/bin/codex`.
+
+The Ubuntu environment inherits a Termux PATH entry, so bare `codex` can resolve to the Termux-side wrapper. Window 0 therefore uses the absolute `/root/.local/bin/codex` path for CAE app-server reads.
+
+### Native Termux Codex
+
+Native Termux Codex is a separate compatibility lane. It was observed read-only at version `0.153.4` but was not repaired or validated during Window 0 preparation.
+
+Native Termux support is tracked in Issue #9 and must not be claimed publicly until that issue passes. Its historical instability must not block Astra testing in the known-good `codexu` environment unless the same defect reproduces there.
 
 ## Campaign policy
 
 Three stages are planned, but only two clean serious 5-hour campaigns:
 
-1. **Window 0:** use only the currently remaining allowance before any banked reset to prove live Astra identity, quota authority, hooks, receipts, and bounded product work.
-2. **Window 1:** after fixes/hardening, use one banked reset for a clean early-release campaign beginning from a documented full allowance state.
-3. **Window 2:** after another hardening phase, wait for the next normal 5-hour availability and run release-candidate validation.
+1. **Window 0:** use only the remaining pre-reset allowance for live identity/hook/receipt validation and one or two bounded real CAE tasks.
+2. **Window 1:** after hardening, use one banked reset for a clean early-release campaign from a documented full allowance state.
+3. **Window 2:** after further hardening, wait for the next normal 5-hour availability and run release-candidate validation.
 
-The second banked reset is intentionally not part of the release-test sequence.
+The second banked reset is intentionally outside the release-test sequence.
 
-Operational authority: `docs/ASTRA_WINDOW_0_SHAKEDOWN.md` and `docs/ASTRA_PLUS_TEST_PLAN.md`.
+Operational authorities:
 
-## Native runtime validation authority
-
-`receipts/native-runtime-validation-final-2026-09-04.md` remains the authoritative A-F runtime receipt for Codex `0.149.0`.
-
-Validated environment:
-
-- Android aarch64 / Termux;
-- Node v24.18.0;
-- Codex 0.149.0;
-- ChatGPT Plus sign-in;
-- default `~/.codex` home.
-
-Result:
-
-- Gate A package integrity: **PASS**.
-- Gate B signed-in native quota/model app-server reads: **PASS with launcher caveat**.
-- Gate C hook setup/idempotence/ownership: **PASS**.
-- Gate D live target + strict non-target hook behavior: **PASS**.
-- Gate E app-server coexistence with active Codex: **PASS**.
-- Gate F CAE-only uninstall + post-uninstall Codex health: **PASS**.
-
-Live Gate D proved `UserPromptSubmit` + `Stop` for exact model `gpt-5.6-sol`, stable opaque session/turn correlation, and strict no-op persistence for a live `gpt-5.6-luna` non-target turn.
-
-The native first-run hook trust gate (`Hooks need review / Trust all`) is a real product UX requirement. CAE must not bypass Codex trust controls.
-
-## Current-version drift gate
-
-The test environment now reports Codex `0.153.2`, newer than the authoritative `0.149.0` A-F validation.
-
-Before any Astra inference, re-run on the current runtime:
-
-```text
-npm test
-npm run check
-CAE_CODEX_COMMAND=/usr/bin/codex cae doctor
-CAE_CODEX_COMMAND=/usr/bin/codex cae probe
-CAE_CODEX_COMMAND=/usr/bin/codex cae readiness
-CAE_CODEX_COMMAND=/usr/bin/codex cae quota
-```
-
-Do not assume app-server, model-list, hook, or launcher behavior is unchanged merely because the previous version passed.
-
-## Previous Plus quota shape observed
-
-The earlier signed-in Plus account state on Codex `0.149.0` exposed:
-
-- 300-minute 5-hour window;
-- 10,080-minute weekly window;
-- one shared/default `codex` quota bucket;
-- `normalModelSlug=null`;
-- no model-specific quota bucket in that observed state;
-- purchased-credit snapshot with `hasCredits=false`, `unlimited=false`, balance `"0"`;
-- reset-credit summary;
-- Astra absent from the catalog at that time.
-
-That quota shape is historical evidence, not authority for the newly available Astra runtime. Window 0 must capture the launch-time Astra shape again.
-
-## Termux launcher compatibility
-
-Runtime validation found one portability issue:
-
-- direct CAE spawning of the standalone musl Codex binary could not resolve DNS because that environment had no usable `/etc/resolv.conf`;
-- the user's normal `/usr/bin/codex` wrapper succeeded with the same binary, Codex home, and ChatGPT auth because its proot environment supplied working resolver state.
-
-Issue #6 tracks this as launcher equivalence rather than an auth/protocol problem.
-
-Implemented:
-
-- `CAE_CODEX_COMMAND` can select the same executable/wrapper the user normally launches;
-- explicit programmatic selection takes precedence over the environment override;
-- ordinary platforms retain `codex` / `codex.cmd` defaults;
-- the same resolved launcher is used for app-server reads and Codex version reporting;
-- the value is treated as one executable path/name, not a shell command.
-
-Issue #6 remains open until `cae doctor`, `cae probe`, `cae readiness`, and `cae quota` pass locally through `/usr/bin/codex` on the current Termux/Codex runtime.
-
-## Technical foundation
-
-Implemented:
-
-- exact configured Astra-model targeting with strict non-Astra no-op behavior;
-- fail-open hook handler;
-- privacy-minimal local observations using opaque SHA-256 session/turn correlation keys;
-- no raw prompt, assistant response, cwd, transcript path, or raw session/turn id in baseline events;
-- non-destructive hook merge/removal with idempotence coverage;
-- atomic setup/uninstall honoring `CODEX_HOME`;
-- `cae doctor`, `probe`, `readiness`, `quota`, `events`, setup/uninstall dry-runs, and private target controls;
-- native Codex app-server client for `account/rateLimits/read` and `model/list`;
-- duration-based 300-minute / 10,080-minute normalization;
-- explicit missing, malformed, partial, and conflicting quota states;
-- reset-aware before/after allowance deltas;
-- purchased-credit/reset-credit preservation without invented units;
-- model-aware quota authority selection using exact `normalModelSlug` when available and labeled `shared_default` otherwise;
-- zero-inference readiness summary that refuses target authority when the model catalog is incomplete;
-- receipt schema v3 with campaign and cause classification plus task shape, outcome quality, intervention burden, tool classes, and quota deltas;
-- measurement evidence hierarchy in `docs/MEASUREMENT_MODEL.md`;
-- early Astra Pro usage evidence in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`;
-- prior-art authority in `docs/PRIOR_ART.md`.
+- `docs/ASTRA_WINDOW_0_SHAKEDOWN.md`
+- `docs/ASTRA_PLUS_TEST_PLAN.md`
+- Issue #8 — Window 0
+- Issue #5 — Window 1
+- Issue #9 — native Termux compatibility
 
 ## Validation status
 
-- Window 0 prep PR #7: **MERGED** as `333ab0a`.
-- PR #7 final CI run #88: **PASS**.
-- Ubuntu Node 20: **PASS**.
-- Ubuntu Node 22: **PASS**.
-- Windows Node 22: **PASS**.
-- macOS Node 22: **PASS**.
-- Real installed Codex A-F runtime validation: **PASS on Termux/Codex 0.149.0; CURRENT 0.153.2 REVALIDATION REQUIRED**.
-- Signed-in Plus app-server quota read: **PASS historically through the working wrapper; current-version revalidation required**.
-- Side-by-side app-server read with active Codex: **PASS on 0.149.0**.
-- Live exact-target hook observation: **PASS on Sol target; production Astra target still requires live capture**.
-- Live non-target strict no-op: **PASS on 0.149.0; repeat around Astra Window 0**.
-- Setup ownership/uninstall: **PASS on 0.149.0**.
-- Launcher override implementation: **CODE/CROSS-PLATFORM CI PASS; TERMUX CURRENT-RUNTIME ACCEPTANCE PENDING**.
-- Astra visible in native picker on Plus: **OPERATOR OBSERVED**.
-- Exact native Astra picker/runtime identity: **READY TO CAPTURE**.
-- Native Astra quota-authority shape: **READY TO CAPTURE**.
-- Astra efficiency improvement: **NOT YET CLAIMED**.
+### Cross-platform source/CI
+
+- Ubuntu Node 20: **PASS**
+- Ubuntu Node 22: **PASS**
+- Windows Node 22: **PASS**
+- macOS Node 22: **PASS**
+
+### codexu current-runtime zero-inference gate
+
+Repository commit tested: `41c8a2af2f7478b4c5091eff38edbc6f331aaedb`
+
+- Node `24.18.0`: **PASS**
+- npm `11.19.1`: **PASS**
+- `npm test`: **PASS — 57/57**
+- `npm run check`: **PASS**
+- CAE `doctor`: **PASS**
+- CAE `probe`: **PASS**
+- CAE `readiness`: **PASS as `target_configuration_required`**
+- CAE `quota`: **PASS**
+- exact native Astra discovery: **PASS**
+- complete model catalog: **PASS**
+- shared-default quota authority: **PASS / understood**
+- privacy check: **PASS**
+- Astra inference used: **0**
+- banked resets used: **0**
+
+### Remaining Window 0 gates
+
+- exact target configuration: **READY — NOT YET EXECUTED**
+- readiness after target set: **PENDING**
+- hook dry-run/setup: **PENDING**
+- live Astra `UserPromptSubmit`/`Stop` identity: **PENDING**
+- live non-Astra no-op recheck: **PENDING**
+- first bounded real Astra task: **PENDING**
+- first Window 0 run receipt: **PENDING**
+- Astra efficiency improvement: **NOT YET CLAIMED**
+
+## Launcher issue disposition
+
+Issue #6's implementation goal is satisfied for the authoritative `codexu` runtime: CAE can use the actual working launcher `/root/.local/bin/codex`, and `doctor`, `probe`, `readiness`, and `quota` all pass through it.
+
+This acceptance is explicitly scoped to `codexu`; it is not evidence that native Termux Codex is healthy. Native Termux remains Issue #9.
+
+## Reasoning policy update
+
+Pre-launch planning assumed Medium as a conservative starting point. Native discovery now shows the production Astra picker default is `low`.
+
+Window 0 should therefore begin the first real task at the native default `low`, not silently override the product default to Medium. Escalation to `medium` or above should occur only when the task demonstrates a concrete reasoning limitation. `xhigh`, `max`, and `ultra` are not burn-probe settings and should not be selected merely to measure consumption.
+
+This keeps the first live CAE shakedown representative of how ordinary Codex users encounter Astra.
 
 ## Immediate execution queue
 
-1. Pull merged main into the local Termux checkout.
-2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `npm test`, `npm run check`, `cae doctor`, `cae probe`, `cae readiness`, and `cae quota`.
-3. Close Issue #6 only if that local launcher acceptance passes without the previous manual workaround.
-4. Run Gate G without spending unnecessary Astra inference: native catalog candidate -> exact target config -> native picker/active model identity -> exact hook identity -> quota-authority selection.
-5. Run Window 0 under Issue #8 using only the remaining pre-reset allowance.
-6. Turn Astra off; fix/harden with Sol/Luna/Hermes/CI.
-7. Freeze the Window 1 candidate, then use one banked reset for Issue #5's clean early-release campaign.
-8. After Window 1, harden again without Astra.
-9. Wait for the next normal 5-hour availability and run Window 2 release-candidate validation.
-10. Publish v0.1 only after `docs/RELEASE_CRITERIA.md` passes.
+1. Merge the live-preflight authority update after CI passes.
+2. In `codexu`, configure exactly `gpt-6-astra` using the native-discovery command.
+3. Re-run `cae readiness`; require `ready_for_live_hook_capture`.
+4. Run `cae setup --dry-run`, review ownership, then install the CAE hooks.
+5. Keep all other Codex usage idle while the shared meter is being measured.
+6. Select Astra normally through `/model` and use native default reasoning `low` for the first bounded real task.
+7. Capture the live Astra hook identity and the full before/after Window 0 receipt.
+8. If weekly burn is small and interpretable, consider one second bounded task; otherwise stop Astra and harden with non-Astra tools.
+9. After Window 0, fix/disposition defects with Sol/Luna/Hermes/CI.
+10. Freeze the Window 1 candidate before using one banked reset.
 
 ## Explicitly deferred
 
+- Native Termux repair beyond Issue #9.
 - Work support.
 - General Codex model optimization.
 - Luna/Sol/Terra routing.
@@ -193,4 +159,4 @@ Implemented:
 
 ## Release posture
 
-CAE is **Astra-live but not yet Astra-validated**. Window 0 preparation is merged and cross-platform CI includes macOS. The only pre-inference blocker now is current Termux/Codex `0.153.2` zero-inference acceptance before the controlled Window 0 live Astra task.
+CAE is **live-Astra ready but not yet live-Astra validated**. The pre-inference gate is complete in `codexu`; the next step is exact target configuration, hook installation, and the first controlled real Astra task using only the remaining pre-reset allowance.
