@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { summarizeAstraReadiness } from "../src/readiness.js";
+import { evaluateMeasurementReadiness, summarizeAstraReadiness } from "../src/readiness.js";
 
 function catalog(...models) {
   return { data: models };
@@ -170,4 +170,177 @@ test("native hook readiness gating precedence", () => {
     nativeHooks: { readable: false, installed: false }
   });
   assert.equal(prec4.status, "native_hooks_unavailable");
+});
+
+test("F3: both 5h and weekly reported with reset info yields ready_for_live_hook_capture", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: sharedQuota(),
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(result.status, "ready_for_live_hook_capture");
+  assert.equal(result.measurementReadiness.status, "ready");
+  assert.equal(result.measurementReadiness.deltaReady, true);
+  assert.equal(result.measurementReadiness.fiveHourVisibility, "reported");
+  assert.equal(result.measurementReadiness.weeklyVisibility, "reported");
+});
+
+test("F3: 5h reported and weekly missing yields quota_measurements_degraded", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: 10, windowDurationMins: 300, resetsAt: 1000 }
+      }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(result.status, "quota_measurements_degraded");
+  assert.equal(result.measurementReadiness.status, "degraded");
+  assert.equal(result.measurementReadiness.fiveHourVisibility, "reported");
+  assert.equal(result.measurementReadiness.weeklyVisibility, "not_reported");
+  assert.equal(result.measurementReadiness.fiveHourDeltaReady, true);
+  assert.equal(result.measurementReadiness.weeklyDeltaReady, false);
+  assert.equal(result.measurementReadiness.deltaReady, false);
+  assert.match(result.nextAction, /degraded quota window visibility/);
+});
+
+test("F3: weekly reported and 5h missing yields quota_measurements_degraded", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: {
+        limitId: "codex",
+        secondary: { usedPercent: 50, windowDurationMins: 10080, resetsAt: 2000 }
+      }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(result.status, "quota_measurements_degraded");
+  assert.equal(result.measurementReadiness.status, "degraded");
+  assert.equal(result.measurementReadiness.fiveHourVisibility, "not_reported");
+  assert.equal(result.measurementReadiness.weeklyVisibility, "reported");
+  assert.equal(result.measurementReadiness.fiveHourDeltaReady, false);
+  assert.equal(result.measurementReadiness.weeklyDeltaReady, true);
+});
+
+test("F3: both windows missing yields quota_measurements_unavailable and MUST NOT be ready", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: { limitId: "codex" }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.notEqual(result.status, "ready_for_live_hook_capture");
+  assert.equal(result.status, "quota_measurements_unavailable");
+  assert.equal(result.measurementReadiness.status, "unavailable");
+  assert.equal(result.measurementReadiness.reason, "no_usable_quota_windows_reported");
+});
+
+test("F3: authority selected with empty rateLimits object MUST NOT report ready_for_live_hook_capture", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: { rateLimits: {} },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.notEqual(result.status, "ready_for_live_hook_capture");
+  assert.equal(result.authority.status, "selected");
+  assert.equal(result.status, "quota_measurements_unavailable");
+  assert.equal(result.measurementReadiness.status, "unavailable");
+});
+
+test("F3: malformed window yields degraded or unavailable appropriately", () => {
+  const degradedRes = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: 10, windowDurationMins: 300, resetsAt: 1000 },
+        secondary: { usedPercent: "invalid", windowDurationMins: 10080 }
+      }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(degradedRes.status, "quota_measurements_degraded");
+  assert.equal(degradedRes.measurementReadiness.status, "degraded");
+
+  const unavailRes = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: "invalid", windowDurationMins: 300 }
+      }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(unavailRes.status, "quota_measurements_unavailable");
+  assert.equal(unavailRes.measurementReadiness.status, "unavailable");
+});
+
+test("F3: conflicting window yields degraded or unavailable appropriately", () => {
+  // Case A: Conflicting 5h window in rateLimitPayload (primary and secondary have conflicting 5h windows, weekly missing) -> unavailable
+  const unavailConf = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: {
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: 22, windowDurationMins: 300, resetsAt: 1000 },
+        secondary: { usedPercent: 31, windowDurationMins: 300, resetsAt: 1000 }
+      }
+    },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(unavailConf.status, "quota_measurements_unavailable");
+  assert.equal(unavailConf.measurementReadiness.status, "unavailable");
+  assert.equal(unavailConf.measurementReadiness.fiveHourVisibility, "conflicting");
+
+  // Case B: One window reported, one window conflicting -> degraded via evaluateMeasurementReadiness
+  const degradedAuthority = {
+    status: "selected",
+    fiveHour: { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: 1000 },
+    weekly: { status: "conflicting", durationMins: 10080 }
+  };
+  const degradedEval = evaluateMeasurementReadiness(degradedAuthority);
+  assert.equal(degradedEval.status, "degraded");
+  assert.equal(degradedEval.fiveHourVisibility, "reported");
+  assert.equal(degradedEval.weeklyVisibility, "conflicting");
+});
+
+test("F3: native hooks missing or hook command unavailable still blocks readiness", () => {
+  const uninstalled = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: { rateLimits: {} },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: true, installed: false }
+  });
+  assert.equal(uninstalled.status, "native_hooks_not_installed");
+
+  const hookMissing = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: { rateLimits: {} },
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: false, reason: "hook_command_missing" },
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(hookMissing.status, "hook_command_unavailable");
 });

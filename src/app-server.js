@@ -1,9 +1,10 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import readline from "node:readline";
 
 export const APP_SERVER_CLIENT_NAME = "codex-astra-efficiency";
 export const APP_SERVER_CLIENT_VERSION = "0.0.0-dev";
 export const CODEX_COMMAND_ENV = "CAE_CODEX_COMMAND";
+export const CODEX_VERSION_TIMEOUT_MS = 4000;
 
 export function initializeRequest(id = 1) {
   return {
@@ -55,6 +56,100 @@ export function resolveCodexCommand({
   return platform === "win32" ? "codex.cmd" : "codex";
 }
 
+export function isWindowsBatch(command, platform = process.platform) {
+  if (platform !== "win32" || typeof command !== "string") return false;
+  let text = command.trim().toLowerCase();
+  if (
+    (text.startsWith('"') && text.endsWith('"')) ||
+    (text.startsWith("'") && text.endsWith("'"))
+  ) {
+    text = text.slice(1, -1).trim();
+  }
+  return text.endsWith(".cmd") || text.endsWith(".bat");
+}
+
+export function prepareProcessInvocation(
+  command,
+  args = [],
+  { env = process.env, platform = process.platform } = {}
+) {
+  const safeArgs = Array.isArray(args) ? [...args] : [];
+  if (isWindowsBatch(command, platform)) {
+    const comspec = env?.ComSpec || env?.COMSPEC || "cmd.exe";
+    return {
+      file: comspec,
+      args: ["/d", "/s", "/c", command, ...safeArgs]
+    };
+  }
+  return {
+    file: command,
+    args: safeArgs
+  };
+}
+
+export function probeCodexVersion(
+  command = resolveCodexCommand(),
+  {
+    timeoutMs = CODEX_VERSION_TIMEOUT_MS,
+    spawnSyncImpl = spawnSync,
+    env = process.env,
+    platform = process.platform
+  } = {}
+) {
+  const invocation = prepareProcessInvocation(command, ["--version"], {
+    env,
+    platform
+  });
+
+  let result;
+  try {
+    result = spawnSyncImpl(invocation.file, invocation.args, {
+      encoding: "utf8",
+      timeout: timeoutMs,
+      windowsHide: true
+    });
+  } catch (err) {
+    return {
+      version: null,
+      status: "spawn_error",
+      error: err.message
+    };
+  }
+
+  if (result?.error) {
+    const isTimeout =
+      result.error.code === "ETIMEDOUT" ||
+      result.error.message?.includes("timed out");
+    return {
+      version: null,
+      status: isTimeout ? "timeout" : "spawn_error",
+      error: result.error.message
+    };
+  }
+
+  if (result?.signal) {
+    return {
+      version: null,
+      status: "signal",
+      signal: result.signal
+    };
+  }
+
+  if (typeof result?.status === "number" && result.status !== 0) {
+    return {
+      version: null,
+      status: "nonzero_exit",
+      exitCode: result.status
+    };
+  }
+
+  const output = (result?.stdout || result?.stderr || "").trim();
+  return {
+    version: output || null,
+    status: output ? "ok" : "empty_output"
+  };
+}
+
 function writeMessage(stream, message) {
   stream.write(`${JSON.stringify(message)}\n`);
 }
@@ -68,6 +163,14 @@ function safeKill(child) {
   }
 }
 
+function streamErrorCode(err) {
+  if (err?.code && typeof err.code === "string") return err.code;
+  if (err?.message && typeof err.message === "string") {
+    return err.message.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64) || "error";
+  }
+  return "unknown";
+}
+
 async function requestLocalCodex({
   method,
   params,
@@ -78,10 +181,15 @@ async function requestLocalCodex({
   spawnImpl = spawn
 }) {
   const command = resolveCodexCommand({ codexCommand, env, platform });
+  const invocation = prepareProcessInvocation(
+    command,
+    ["app-server", "--listen", "stdio://"],
+    { env, platform }
+  );
 
   let child;
   try {
-    child = spawnImpl(command, ["app-server", "--listen", "stdio://"], {
+    child = spawnImpl(invocation.file, invocation.args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true
     });
@@ -117,7 +225,9 @@ async function requestLocalCodex({
         }
       }
       try {
-        child.stdin.end();
+        if (!child.stdin.destroyed) {
+          child.stdin.end();
+        }
       } catch {
         // Best-effort cleanup only.
       }
@@ -131,6 +241,18 @@ async function requestLocalCodex({
       settle(new Error(`codex_app_server_spawn_failed:${err.message}`));
     });
 
+    child.stdin.on?.("error", (err) => {
+      settle(new Error(`codex_app_server_stream_failed:stdin:${streamErrorCode(err)}`));
+    });
+
+    child.stdout.on?.("error", (err) => {
+      settle(new Error(`codex_app_server_stream_failed:stdout:${streamErrorCode(err)}`));
+    });
+
+    child.stderr.on?.("error", (err) => {
+      settle(new Error(`codex_app_server_stream_failed:stderr:${streamErrorCode(err)}`));
+    });
+
     let stderrBuffer = "";
     child.stderr.setEncoding?.("utf8");
     child.stderr.on?.("data", (chunk) => {
@@ -140,6 +262,9 @@ async function requestLocalCodex({
     });
 
     lines = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
+    lines.on("error", (err) => {
+      settle(new Error(`codex_app_server_stream_failed:stdout:${streamErrorCode(err)}`));
+    });
     const initId = 1;
     const requestId = 2;
 
