@@ -1,45 +1,33 @@
 # Pre-v0.1 Astra audit — 2026-09-05
 
-Status: **confirmed findings / remediation required before v0.1 candidate freeze**
+Status: **F1–F5 FIXED** (PR #18 at merge SHA `32ff3ce4b396d784ca9a03ef143bfbbe187de72a`).
 
-This audit was run against runtime commit `bae14cebc1858c4f602a5f2cf46a2428ccf932f7` with `gpt-6-astra` at low reasoning. The release-foundation PR is documentation/community work only, so these runtime findings also apply to that release line until fixed.
+This audit was run against runtime commit `bae14cebc1858c4f602a5f2cf46a2428ccf932f7` with `gpt-6-astra` at low reasoning. All five confirmed runtime findings have been resolved, regression-covered, and verified in cross-platform CI via PR #18.
 
-## Confirmed findings
+## Confirmed findings and resolutions
 
-1. **P1 — Windows default Codex launcher dispatch**
-   - `resolveCodexCommand()` returns `codex.cmd` on Windows.
-   - `requestLocalCodex()` currently passes that command directly to `spawn()` without a Windows command interpreter.
-   - `codexVersion()` likewise uses direct `spawnSync()`.
-   - `.cmd`/`.bat` launchers require explicit Windows command-interpreter handling.
-   - **Release disposition:** blocker for claimed Windows runtime compatibility.
+1. **P1 — Windows default Codex launcher dispatch (F1)**
+   - **Finding:** `.cmd`/`.bat` launchers require explicit Windows command-interpreter handling. Direct `spawn(command, args)` failed to launch `.cmd` shims on Windows.
+   - **Resolution:** Added `prepareProcessInvocation()` with explicit `ComSpec /d /s /c` dispatch for `.cmd`/`.bat` shims while keeping direct process execution for native Windows binaries (`.exe`) and POSIX binaries. Verified on real `.cmd` shims under Windows CI.
 
-2. **P2 — Child stream errors are not settled**
-   - Child-process `error` is handled, but stdin/stdout/stderr stream errors are not all routed through the request settlement path.
-   - An asynchronous stdin `EPIPE` can escape normal CAE error handling.
-   - **Release disposition:** fix before v0.1 reliability freeze.
+2. **P2 — Child stream errors are not settled (F2)**
+   - **Finding:** Child `stdin`, `stdout`, and `stderr` stream errors (such as async `EPIPE`) could escape without settlement and cause unhandled process errors.
+   - **Resolution:** Attached comprehensive error handlers across `stdin`, `stdout`, `stderr`, and `readline.Interface` streams, routing all errors through the single `settle()` path with sanitized error codes (`codex_app_server_stream_failed:<stream>:<code/reason>`), guaranteed single rejection, timer cleanup, and child termination.
 
-3. **P2 — Readiness can approve an authority with no usable windows**
-   - Authority selection can succeed while both normalized 5-hour and weekly windows are `not_reported`.
-   - The current readiness summary gates on authority selection but not usable measurement windows.
-   - **Release disposition:** fix before v0.1 because readiness must not overstate measurement readiness.
+3. **P2 — Readiness can approve an authority with no usable windows (F3)**
+   - **Finding:** Authority selection could succeed while both normalized 5-hour and weekly windows were `not_reported`, producing false-green readiness.
+   - **Resolution:** Separated authority resolution from measurement readiness in `summarizeAstraReadiness()`. Implemented explicit `quota_measurements_unavailable` and `quota_measurements_degraded` states with structured detail for 5h visibility, weekly visibility, and delta-readiness.
 
-4. **P2 — Synchronous version probe has no timeout**
-   - `codexVersion()` uses `spawnSync()` without a timeout.
-   - A stalled launcher can block `doctor`, `readiness`, and related diagnostics indefinitely.
-   - **Release disposition:** add a bounded timeout and deterministic unavailable result.
+4. **P2 — Synchronous version probe has no timeout (F4)**
+   - **Finding:** `codexVersion()` called `spawnSync()` without a timeout, allowing a hung launcher to block diagnostics indefinitely.
+   - **Resolution:** Added `probeCodexVersion()` bounded by `CODEX_VERSION_TIMEOUT_MS = 4000`, returning deterministic unavailable results (`codex: null`) and exposing structured `codexVersionStatus` (`ok`, `timeout`, `spawn_error`, `nonzero_exit`, `signal`).
 
-5. **P2 — Parsed config shape is not validated before dereference**
-   - Valid JSON such as `null` can escape the JSON parse try/catch and then fail at `fileConfig.astraModelIds`.
-   - **Release disposition:** validate the parsed config as an object and use the existing warning/fallback semantics for invalid shapes.
+5. **P2 — Parsed config shape is not validated before dereference (F5)**
+   - **Finding:** Valid JSON such as `null` escaped the JSON parse try/catch and crashed on dereference of `fileConfig.astraModelIds`.
+   - **Resolution:** Validated parsed JSON object shape before dereferencing. Corrupt shapes (`null`, `[]`, primitives, invalid `astraModelIds` types) emit `config_invalid_shape:<reason>` warnings, preserve `CAE_ASTRA_MODEL_IDS` environment fallback, and fail-open in hook processing.
 
-## Required remediation standard
-
-- Add focused negative-control tests for all five findings.
-- Preserve fail-safe/unknown semantics; do not guess quota state.
-- Windows `.cmd` dispatch must be explicit and safely argumentized.
-- Stream and timeout failures must settle once, clean up best-effort, and never crash/hang the CLI.
-- Readiness must distinguish full measurement readiness from degraded/unavailable quota visibility.
-- Invalid config shapes must return a warning/fallback rather than crash diagnostics or hooks.
-- Run the full local suite, syntax check, and cross-platform CI before replacing the release candidate.
-
-No efficiency/savings claim is affected by this audit; these are correctness/reliability fixes.
+## Validation summary
+- Full test suite: 130 tests passing.
+- `npm run check`: clean.
+- Cross-platform CI (Ubuntu 20, Ubuntu 22, Windows 22, macOS 22): all green.
+- Zero additional model inference or banked resets spent.

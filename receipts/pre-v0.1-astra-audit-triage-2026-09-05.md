@@ -2,16 +2,18 @@
 
 Audit target: `bae14cebc1858c4f602a5f2cf46a2428ccf932f7`
 
-Result: **5/5 findings independently confirmed by source inspection; remediation required before final v0.1 candidate freeze.**
+Result: **F1–F5 FIXED** in PR #18 at merge SHA `32ff3ce4b396d784ca9a03ef143bfbbe187de72a`.
 
-| ID | Severity | Area | Triage |
-| --- | --- | --- | --- |
-| F1 | P1 | Windows launcher dispatch | Confirmed; v0.1 blocker for claimed Windows runtime compatibility |
-| F2 | P2 | Child stream `EPIPE`/stdio errors | Confirmed; fix before v0.1 reliability freeze |
-| F3 | P2 | Readiness with missing quota windows | Confirmed; false-green readiness must be removed |
-| F4 | P2 | Unbounded synchronous version probe | Confirmed; bounded timeout required |
-| F5 | P2 | Invalid parsed config shape | Confirmed; warning/fallback required instead of crash |
+| ID | Severity | Area | Status | Resolution |
+| --- | --- | --- | --- | --- |
+| F1 | P1 | Windows launcher dispatch | FIXED | ComSpec `/d /s /c` argv dispatch for `.cmd`/`.bat`; native `.exe` direct; Windows CI `.cmd` e2e test passing |
+| F2 | P2 | Child stream `EPIPE`/stdio errors | FIXED | `stdin`, `stdout`, `stderr`, and `readline` errors route to single `settle()`; structured codes; cleanup verified |
+| F3 | P2 | Readiness with missing quota windows | FIXED | Explicit measurement readiness (`unavailable`/`degraded`/`ready`); truthful visibility; false-green gate eliminated |
+| F4 | P2 | Unbounded synchronous version probe | FIXED | Documented `CODEX_VERSION_TIMEOUT_MS = 4000`; deterministic unavailable result; `codexVersionStatus` surfaced |
+| F5 | P2 | Invalid parsed config shape | FIXED | JSON shape validated before dereference; `config_invalid_shape:<reason>` warning; env fallback; fail-open hooks |
 
-The audit itself made no repository changes. These findings are deterministic correctness/reliability issues and should be fixed and regression-tested without additional Astra or other Codex inference.
-
-PR #16 remains a draft release-foundation/documentation lane and is not evidence that these runtime gaps are fixed.
+Evidence:
+- PR #18 merged to main at SHA `32ff3ce4b396d784ca9a03ef143bfbbe187de72a`
+- Full CI matrix green (Ubuntu 20/22, Windows 22, macOS 22)
+- Zero Codex model inference spent
+- Reset credits: 2 remaining; Window 1 not started

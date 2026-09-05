@@ -14,6 +14,11 @@ All notable user-facing changes to Codex Astra Efficiency (CAE) are recorded her
 
 ### Fixed
 
+- Windows `.cmd`/`.bat` Codex launcher execution uses explicit ComSpec `/d /s /c` dispatch with safe argument preservation, while native Windows binaries and POSIX executables retain direct process execution (F1).
+- Child process stdin/stdout/stderr and readline error paths route deterministically through unified single-settlement logic with sanitized error codes (F2).
+- Readiness gates on truthful quota measurement visibility, distinguishing `quota_measurements_unavailable` and `quota_measurements_degraded` from full readiness (F3).
+- Synchronous Codex version probe is bounded by a documented timeout (`CODEX_VERSION_TIMEOUT_MS = 4000`) and reports structured `codexVersionStatus` (F4).
+- Config loading strictly validates parsed JSON object shape before dereference, preserving environment fallback and fail-open hook behavior (F5).
 - Quota authority changes now include native `limitId` stability.
 - Readiness now requires both a callable CAE hook command and installed/readable native CAE hooks.
 - Windows hook-command discovery/probing supports target-platform path semantics and npm `.cmd`/`.bat` shims.

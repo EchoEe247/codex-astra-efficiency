@@ -165,8 +165,9 @@ As of the current pre-v0.1 candidate:
 - Cross-platform CI is green on Ubuntu, Windows, and macOS.
 - Readiness now requires both a callable hook command and installed/readable native CAE hooks.
 - Native app-server spawn failure/timeout handling and unknown-reset accounting have been hardened.
-- Current frozen Window 1 candidate: `bae14cebc1858c4f602a5f2cf46a2428ccf932f7`.
-- Window 1 has **not** started and no banked reset has been consumed.
+- Pre-v0.1 runtime hardening (F1–F5: Windows .cmd dispatch, child stdio/EPIPE stream errors, quota measurement visibility, bounded version timeout, and config shape validation) is merged to main (PR #18 at SHA `32ff3ce4b396d784ca9a03ef143bfbbe187de72a`).
+- Historical candidate `bae14cebc1858c4f602a5f2cf46a2428ccf932f7` is SUSPENDED_FOR_PRE_V0_1_HARDENING pending post-hardening refreeze.
+- Window 1 has **not** started and no banked reset has been consumed (2 remaining).
 - CAE does **not** claim a validated default Astra efficiency improvement yet.
 
 Historical validation receipts remain available under [`receipts/`](receipts/). Current release authority is [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md) plus [`trackers/STATE.md`](trackers/STATE.md).
