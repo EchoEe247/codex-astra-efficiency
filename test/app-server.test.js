@@ -170,3 +170,138 @@ test("reads the same native model catalog that backs Codex picker discovery", as
   assert.equal(response.initialized, true);
   assert.deepEqual(response.result, catalog);
 });
+
+test("F2 negative test: rejects deterministically when spawn fails/throws error", async () => {
+  const missingLauncher = "/definitely/missing/codex";
+  let err;
+  try {
+    await readAccountRateLimits({
+      codexCommand: missingLauncher,
+      spawnImpl: () => {
+        throw new Error("spawn ENOENT");
+      }
+    });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should have rejected");
+  assert.match(err.message, /codex_app_server_spawn_failed/);
+});
+
+test("F3 negative test: timeout rejects request even if child process stdout is kept open", async () => {
+  const spawnImpl = () => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = {
+      stdin,
+      stdout,
+      stderr,
+      killed: false,
+      kill() {
+        this.killed = true;
+      }
+    };
+    return child;
+  };
+
+  let err;
+  const startTime = Date.now();
+  try {
+    await readAccountRateLimits({
+      codexCommand: "hang-codex",
+      spawnImpl,
+      timeoutMs: 50
+    });
+  } catch (e) {
+    err = e;
+  }
+  const duration = Date.now() - startTime;
+  assert.ok(err, "should have timed out");
+  assert.ok(duration < 500, `duration ${duration}ms should be bounded`);
+  assert.match(err.message, /codex_app_server_timeout/);
+});
+
+test("rejects when initialization fails with error", async () => {
+  const spawnImpl = (command, args) => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = { stdin, stdout, stderr, killed: false, kill() {} };
+
+    stdin.on("data", (chunk) => {
+      const line = chunk.toString().trim();
+      if (!line) return;
+      const msg = JSON.parse(line);
+      if (msg.method === "initialize") {
+        stdout.write(`${JSON.stringify({ id: msg.id, error: { message: "init failed" } })}\n`);
+      }
+    });
+
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "fail-init-codex", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should fail");
+  assert.match(err.message, /codex_app_server_initialize_failed:init failed/);
+});
+
+test("rejects when request fails with error", async () => {
+  const spawnImpl = (command, args) => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = { stdin, stdout, stderr, killed: false, kill() {} };
+
+    stdin.on("data", (chunk) => {
+      const line = chunk.toString().trim();
+      if (!line) return;
+      const msg = JSON.parse(line);
+      if (msg.method === "initialize") {
+        stdout.write(`${JSON.stringify({ id: msg.id, result: {} })}\n`);
+      } else if (msg.method === "account/rateLimits/read") {
+        stdout.write(`${JSON.stringify({ id: msg.id, error: { message: "request failed" } })}\n`);
+      }
+    });
+
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "fail-req-codex", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should fail");
+  assert.match(err.message, /codex_app_server_request_failed/);
+});
+
+test("rejects when stream closes prematurely", async () => {
+  const spawnImpl = (command, args) => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = { stdin, stdout, stderr, killed: false, kill() {} };
+
+    stdin.on("data", (chunk) => {
+      stdout.end();
+    });
+
+    return child;
+  };
+
+  let err;
+  try {
+    await readAccountRateLimits({ codexCommand: "close-codex", spawnImpl });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, "should fail");
+  assert.match(err.message, /codex_app_server_closed_before_response/);
+});
