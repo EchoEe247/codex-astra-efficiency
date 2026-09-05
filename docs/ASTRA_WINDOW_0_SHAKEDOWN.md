@@ -57,7 +57,7 @@ Then record, without guessing:
 
 If `cae readiness` returns `target_configuration_required`, execute only the exact command it reports after verifying the candidate is the native Astra entry, then re-run `cae readiness`.
 
-If it returns `astra_discovery_ambiguous`, `quota_authority_unresolved`, or `native_read_unavailable`, stop before Astra inference and diagnose the zero-inference path first.
+If it returns `model_catalog_incomplete`, `astra_discovery_ambiguous`, `quota_authority_unresolved`, or `native_read_unavailable`, stop before Astra inference and diagnose the zero-inference path first. An incomplete catalog cannot establish a unique Astra target because a later page could contain another candidate.
 
 Issue #6 remains open unless the launcher commands above pass through the normal wrapper without the prior manual workaround.
 
