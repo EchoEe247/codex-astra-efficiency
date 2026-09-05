@@ -10,7 +10,7 @@ The product constraint above all others is simple:
 
 You launch Codex normally, select Astra through native `/model`, give it real work, and let the agent operate normally. CAE stays beside that workflow to make Astra usage more observable and, only where real evidence supports it, more efficient.
 
-> **Pre-release:** the repository is still private while the v0.1 release candidate is validated. The first public release is intended to be a trustworthy early release, not the final form of CAE.
+> **v0.1.0 release:** v0.1.0 is the first public early release of CAE. It is intentionally observability-first: trustworthy measurement and native Codex integration come before unproven efficiency interventions.
 
 ## What CAE does
 
@@ -38,7 +38,13 @@ CAE does **not** increase OpenAI limits, automate resets, silently substitute an
 
 The complete release installation and troubleshooting guide is in [`docs/INSTALL.md`](docs/INSTALL.md).
 
-For the v0.1 package artifact:
+Install the global CLI from npm:
+
+```bash
+npm install -g codex-astra-efficiency
+```
+
+Alternatively, install from a downloaded GitHub Release package artifact:
 
 ```bash
 npm install -g ./codex-astra-efficiency-0.1.0.tgz
@@ -153,22 +159,20 @@ See:
 
 ## Current validation state
 
-As of the current pre-v0.1 candidate:
+As of the v0.1.0 release:
 
-- Exact native Astra id: `gpt-6-astra`.
-- Native default reasoning observed: `low`.
-- Native quota authority observed on the Plus validation account: `shared_default` / `default` / `limitId=codex`.
-- Window 0 is complete.
-- Real Astra `UserPromptSubmit`/`Stop` hook capture is proven.
-- Privacy-safe opaque session/turn correlation is proven.
-- Setup idempotence and CAE-owned-only uninstall are regression-covered.
-- Cross-platform CI is green on Ubuntu, Windows, and macOS.
-- Readiness now requires both a callable hook command and installed/readable native CAE hooks.
-- Native app-server spawn failure/timeout handling and unknown-reset accounting have been hardened.
-- Pre-v0.1 runtime hardening (F1–F5: Windows .cmd dispatch, child stdio/EPIPE stream errors, quota measurement visibility, bounded version timeout, and config shape validation) is merged to main (PR #18 at SHA `32ff3ce4b396d784ca9a03ef143bfbbe187de72a`).
-- Historical candidate `bae14cebc1858c4f602a5f2cf46a2428ccf932f7` is SUSPENDED_FOR_PRE_V0_1_HARDENING pending post-hardening refreeze.
-- Window 1 has **not** started and no banked reset has been consumed (2 remaining).
-- CAE does **not** claim a validated default Astra efficiency improvement yet.
+- **Exact native Astra target:** `gpt-6-astra`.
+- **Codex CLI validated:** `0.153.2` on Node.js 20+.
+- **Native default reasoning observed:** `low`.
+- **Native quota authority observed:** `shared_default` / `default` / `limitId=codex`.
+- **Live hook capture proven:** Real `UserPromptSubmit` and `Stop` hooks captured and verified under native Codex.
+- **Strict non-Astra no-op proven:** Non-Astra turns (`gpt-5.6-sol`) execute with zero hook interference and zero observation records.
+- **Installed artifact validation:** The globally installed `codex-astra-efficiency@0.1.0` package passed end-to-end live release-candidate validation in normal Codex workflow.
+- **Privacy-safe opaque correlation:** Proven across turns; zero raw prompts, responses, file paths, cwd strings, repository names, or credentials persisted.
+- **Setup and uninstall safety:** Verified idempotent; removes only CAE-owned handlers and leaves user hooks byte-for-byte intact.
+- **Cross-platform CI:** Green across Ubuntu, Windows, and macOS.
+- **Support boundary:** Authoritative live runtime is `codexu` (Ubuntu under Termux). Native Termux Codex is explicitly excluded from v0.1 support.
+- **No fixed savings claim:** v0.1.0 makes no unsupported claim of fixed percentage savings; native token accounting and optimization mechanisms are deferred post-v0.1.
 
 Historical validation receipts remain available under [`receipts/`](receipts/). Current release authority is [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md) plus [`trackers/STATE.md`](trackers/STATE.md).
 

@@ -2,6 +2,14 @@
 
 Last updated: 2026-09-05
 
+## Current release state
+
+- **V0_1_LIVE_RC_VALIDATION:** PASS
+- **LIVE_VALIDATED_SHA:** 44358f5155d031a6d40287cf3f08b90bf6809bd3
+- **RESET_CREDITS_REMAINING:** 1 (second banked reset untouched)
+- **PUBLICATION_STATUS:** READY_FOR_PUBLICATION
+
+
 ## Current phase
 
 **WINDOW 0 COMPLETE / PRE-WINDOW-1 HARDENING**

@@ -14,7 +14,13 @@ CAE does not replace Codex authentication and does not collect OpenAI credential
 
 ## Install
 
-For the first release, install the npm package artifact attached to the GitHub release:
+Install the global CLI from npm:
+
+```bash
+npm install -g codex-astra-efficiency
+```
+
+Alternatively, install from a downloaded GitHub Release package artifact:
 
 ```bash
 npm install -g ./codex-astra-efficiency-0.1.0.tgz
