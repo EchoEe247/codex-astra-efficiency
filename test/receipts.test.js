@@ -18,13 +18,14 @@ function quota(used5h, usedWeekly, resets5h = 1000, resetsWeekly = 2000) {
   };
 }
 
-test("receipt stores sanitized quota facts and measured model-aware deltas", () => {
+test("receipt stores sanitized quota facts, campaign, cause class, and model-aware deltas", () => {
   const started = startRunReceipt({
     id: "run-1",
     model: "gpt-6-astra",
     codexVersion: "codex 1.2.3",
     reasoningEffort: "high",
     serviceTier: "standard",
+    campaign: "window_0",
     taskClass: "cross-system debugging",
     projectScale: "large",
     continuity: "continuation",
@@ -35,6 +36,7 @@ test("receipt stores sanitized quota facts and measured model-aware deltas", () 
   const completed = completeRunReceipt(started, {
     rawQuota: quota(24, 26),
     outcome: "PASS",
+    causeClass: "MIXED",
     requestedObjectiveCompleted: true,
     validationStatus: "tests-pass",
     humanInterventions: 1,
@@ -46,8 +48,10 @@ test("receipt stores sanitized quota facts and measured model-aware deltas", () 
     endedAt: "2026-09-04T19:30:00.000Z"
   });
 
-  assert.equal(completed.schemaVersion, 2);
+  assert.equal(completed.schemaVersion, 3);
   assert.equal(completed.status, "completed");
+  assert.equal(completed.campaign, "window_0");
+  assert.equal(completed.causeClass, "MIXED");
   assert.equal(completed.durationMs, 30 * 60 * 1000);
   assert.equal(completed.plan, "plus");
   assert.equal(completed.reasoningEffort, "high");
@@ -84,12 +88,14 @@ test("native quota plan overrides a conflicting provided label", () => {
   });
 
   assert.equal(started.plan, "plus");
+  assert.equal(started.campaign, "unspecified");
 });
 
 test("receipt preserves unavailable quota and unknown work evidence instead of guessing", () => {
   const started = startRunReceipt({
     id: "run-2",
     model: "gpt-6-astra",
+    campaign: "window_1_control",
     startedAt: "2026-09-04T19:00:00.000Z"
   });
   const completed = completeRunReceipt(started, {
@@ -105,9 +111,27 @@ test("receipt preserves unavailable quota and unknown work evidence instead of g
     fiveHour: { status: "unavailable" },
     weekly: { status: "unavailable" }
   });
+  assert.equal(completed.causeClass, "UNKNOWN");
   assert.equal(completed.requestedObjectiveCompleted, null);
   assert.equal(completed.humanInterventions, null);
   assert.equal(completed.subagentCount, null);
+});
+
+test("receipt rejects unknown campaign and cause-class labels", () => {
+  assert.throws(
+    () =>
+      startRunReceipt({
+        model: "gpt-6-astra",
+        campaign: "made-up"
+      }),
+    /unsupported campaign/
+  );
+
+  const started = startRunReceipt({ model: "gpt-6-astra" });
+  assert.throws(
+    () => completeRunReceipt(started, { causeClass: "BLAME_USER" }),
+    /unsupported cause class/
+  );
 });
 
 test("appendReceipt writes local JSONL only to the supplied state directory", () => {
@@ -116,12 +140,14 @@ test("appendReceipt writes local JSONL only to the supplied state directory", ()
     const receipt = startRunReceipt({
       id: "run-3",
       model: "gpt-6-astra",
+      campaign: "window_2_rc",
       startedAt: "2026-09-04T19:00:00.000Z"
     });
     const file = appendReceipt(receipt, dir);
     const rows = fs.readFileSync(file, "utf8").trim().split("\n").map(JSON.parse);
     assert.equal(rows.length, 1);
     assert.equal(rows[0].id, "run-3");
+    assert.equal(rows[0].campaign, "window_2_rc");
     assert.equal(path.dirname(file), dir);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
