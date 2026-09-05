@@ -63,6 +63,18 @@ test("configured single Astra candidate becomes ready for live hook capture", ()
   assert.equal(result.nextAction, "select Astra in native /model and capture live hook identity");
 });
 
+test("incomplete native model catalog blocks target authority", () => {
+  const result = summarizeAstraReadiness({
+    modelPayload: { ...catalog(astra()), nextCursor: "page-2" },
+    rateLimitPayload: sharedQuota(),
+    configuredModelIds: ["gpt-6-astra"]
+  });
+
+  assert.equal(result.status, "model_catalog_incomplete");
+  assert.equal(result.discovery.nextCursorPresent, true);
+  assert.equal(result.authority.reason, "model_catalog_has_more_pages");
+});
+
 test("ambiguous Astra discovery does not choose a target", () => {
   const result = summarizeAstraReadiness({
     modelPayload: catalog(astra("gpt-6-astra"), astra("gpt-6-astra-fast")),
