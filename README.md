@@ -1,123 +1,68 @@
 # Codex Astra Efficiency
 
-**Use Astra normally in Codex. Waste less of your Plus allowance.**
+**Use Astra normally in Codex. Measure the work, not just the burn.**
 
-Codex Astra Efficiency (CAE) is a lightweight, Astra-specific efficiency layer for ChatGPT Plus users working in Codex.
+Codex Astra Efficiency (CAE) is a lightweight Astra-specific observability and efficiency layer for ChatGPT Plus users working in Codex.
 
-The project has one product constraint above all others:
+The product constraint above all others is simple:
 
 > **Codex should still feel like Codex.**
 
-Users should keep the normal Codex experience: open Codex, select Astra from the normal model picker, give it real work, and let the agent operate normally. CAE exists to make that Astra usage more observable and, where validated, more efficient without turning Codex into a new agent framework.
+You launch Codex normally, select Astra through native `/model`, give it real work, and let the agent operate normally. CAE stays beside that workflow to make Astra usage more observable and, only where real evidence supports it, more efficient.
+
+> **Pre-release:** the repository is still private while the v0.1 release candidate is validated. The first public release is intended to be a trustworthy early release, not the final form of CAE.
+
+## What CAE does
+
+- Targets the exact configured Astra model and remains a strict no-op for other models.
+- Uses native Codex `UserPromptSubmit` and `Stop` hooks for privacy-safe local observations.
+- Reads native Codex model/quota surfaces without replacing Codex authentication or model selection.
+- Tracks 5-hour and weekly Plus windows independently when Codex exposes them authoritatively.
+- Refuses to invent a quota delta across unknown or changed reset boundaries.
+- Preserves unrelated Codex hooks/configuration during setup and uninstall.
+- Keeps observations local by default and does not persist raw prompts, responses, source code, cwd paths, account identity, or raw native session/turn ids.
+- Fails open if CAE observation itself fails, so CAE does not block a productive Codex turn.
+
+CAE does **not** increase OpenAI limits, automate resets, silently substitute another model, or currently promise a fixed percentage of Astra savings.
 
 ## Scope
-
-CAE is intentionally narrow.
 
 - **Plan:** ChatGPT Plus first.
 - **Surface:** Codex first.
 - **Model:** Astra only.
 - **Users:** everyday Codex users through professional developers.
-- **Workload:** real software work, including substantial and long-running tasks.
-- **Goal:** increase useful completed work per unit of Astra allowance by reducing avoidable burn, not by making Astra do trivial work.
+- **Workload:** real software work, including substantial tasks.
+- **Goal:** increase useful completed work per unit of Astra allowance by reducing avoidable burn without reducing the work to toy tasks.
 
-CAE does **not** manage, route, tune, or replace the user's other Codex models. When Astra is not active, CAE should stay out of the way.
+## Quick start
 
-## Product principles
+The complete release installation and troubleshooting guide is in [`docs/INSTALL.md`](docs/INSTALL.md).
 
-1. **Native Codex workflow.** No mandatory harness migration, custom agent UI, task DSL, proxy, or repo restructuring.
-2. **Astra means Astra.** The core product does not silently substitute cheaper models.
-3. **Measure before promoting defaults.** Astra-specific changes must be justified by measured Plus usage and real-work outcomes.
-4. **5-hour and weekly limits are separate.** Both are tracked independently when Codex exposes them.
-5. **Missing quota data is unknown, not zero or unlimited.** Never invent usage state.
-6. **Do not kill productive work.** CAE should not terminate a useful active turn merely because a threshold is crossed.
-7. **Large work is not waste.** A long or expensive run can be efficient if it completes valuable work. CAE targets unnecessary work, not ambitious work.
-8. **Local by default.** Usage receipts and session analysis stay local unless the user explicitly exports them.
-9. **Minimal interruption.** Warnings and controls must be rare, high-value, and optional.
-10. **No quota-circumvention claims.** CAE cannot increase OpenAI limits; it helps users spend the allowance they already have more deliberately.
+For the v0.1 package artifact:
 
-## Current private foundation
-
-Implemented:
-
-- exact configured Astra-model targeting with strict non-Astra no-op behavior;
-- native Codex `UserPromptSubmit` / `Stop` hook handling with fail-open behavior;
-- privacy-safe opaque session/turn correlation rather than persisted raw identifiers;
-- non-destructive, idempotent hook setup and CAE-owned-only uninstall;
-- native Codex app-server reads for rate-limit state and model catalog discovery;
-- 5-hour / weekly normalization by actual window duration;
-- explicit missing, malformed, partial, and conflicting quota states;
-- reset-aware before/after allowance deltas;
-- native purchased-credit snapshot preservation when Codex reports it, without inventing a unit or dollar conversion;
-- model-aware quota authority selection using exact native model metadata when available;
-- privacy-safe measurement descriptors for task shape and outcome quality;
-- local Astra run-receipt schema v3 with campaign and cause classification plus allowance, workload, objective, validation, subagent/tool, intervention, scope, and rework evidence;
-- read-only native-model discovery that never silently activates an Astra candidate;
-- read-only `cae readiness` summary for Astra candidate, target configuration, and quota authority before live inference;
-- explicit Codex launcher override for environments where the user's normal wrapper provides required runtime setup;
-- Ubuntu and Windows CI, with macOS coverage added to the Window 0 preparation lane.
-
-CAE does **not** claim a validated Astra efficiency improvement yet. The first defaults will be driven by live Plus evidence from the staged pre-release campaigns.
-
-## Real native Codex validation
-
-CAE completed Gates A-F against a real signed-in ChatGPT Plus Codex installation on Android/Termux with Codex `0.149.0`.
-
-Validated:
-
-- package integrity;
-- signed-in quota/model app-server reads;
-- hook setup and idempotence;
-- live exact-target `UserPromptSubmit` + `Stop` observations;
-- strict live non-target no-op behavior;
-- app-server coexistence with an active Codex process;
-- CAE-only uninstall and healthy post-uninstall Codex operation.
-
-The native Codex hook trust prompt (`Hooks need review / Trust all`) is a real first-run UX step and is not bypassed by CAE.
-
-See [`receipts/native-runtime-validation-final-2026-09-04.md`](receipts/native-runtime-validation-final-2026-09-04.md).
-
-The live test environment now reports Codex `0.153.2`, so current-version revalidation is required before spending Astra allowance. See [`receipts/astra-plus-availability-observation-2026-09-04.md`](receipts/astra-plus-availability-observation-2026-09-04.md).
-
-## Codex launcher compatibility
-
-Ordinary installations use the normal platform command automatically:
-
-- Unix-like: `codex`
-- Windows: `codex.cmd`
-
-If the user's working Codex command is a wrapper or a different executable path, CAE can use the same launcher:
-
-```text
-CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae doctor
-CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae probe
-CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness
-CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae quota
+```bash
+npm install -g ./codex-astra-efficiency-0.1.0.tgz
 ```
 
-The override is one executable path/name, not a shell command. CAE uses the same resolved launcher for Codex version checks and short-lived app-server reads.
+Then configure the exact Astra target and install the CAE hooks:
 
-This was added after Termux validation showed that the user's normal Codex wrapper supplied resolver environment required by the standalone musl binary. Final Issue #6 acceptance requires the commands above to pass through `/usr/bin/codex` on the current Termux runtime.
+```bash
+cae doctor
+cae target set gpt-6-astra
+cae setup --dry-run
+cae setup
+cae readiness
+```
 
-## How CAE measures before it optimizes
+A healthy setup reports:
 
-CAE separates:
+```text
+ready_for_live_hook_capture
+```
 
-1. observed facts;
-2. deterministic measurements;
-3. signals;
-4. efficiency hypotheses;
-5. validated interventions.
+Launch Codex normally, use `/model`, select **GPT-6-Astra**, and work normally.
 
-A short run is not automatically efficient, and an expensive run is not automatically wasteful. CAE records task shape and outcome alongside quota movement rather than reducing everything to prompts or minutes.
-
-Material burn/failure events are classified as best supported by evidence: model, user/task shape, CAE, mixed, or unknown. This exists to avoid implementing the wrong fix, not to blame users.
-
-See [`docs/MEASUREMENT_MODEL.md`](docs/MEASUREMENT_MODEL.md), [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md), and [`docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`](docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md).
-
-## Private validation CLI
-
-These commands exist for development and compatibility validation; they are not yet a public installation contract.
+Useful local commands:
 
 ```text
 cae doctor
@@ -134,44 +79,121 @@ cae target clear
 cae events
 ```
 
-Key behavior:
+Before removing the global package, remove CAE-owned hooks with:
 
-- `cae probe` is read-only and checks the local Codex app-server quota/model surfaces.
-- `cae readiness` is read-only and reduces the zero-inference pre-Astra state to one result: Astra discovery, exact target configuration, live quota authority, and the next safe action. It never silently configures a target.
-- `cae setup` adds only CAE-owned `UserPromptSubmit` and `Stop` hooks to the normal Codex home.
-- `cae target ...` is a private validation/compatibility control; the public product goal is zero-friction Astra targeting after the exact production picker identity is validated.
-- `cae events` contains only targeted-model baseline observations and excludes raw prompt/response/path content.
+```bash
+cae uninstall
+npm uninstall -g codex-astra-efficiency
+```
 
-## Pre-release campaign
+## Native Codex workflow
 
-Astra has now been operator-observed in the native `/model` picker on the test Plus account. The project has moved from launch waiting to controlled live validation.
+CAE does not launch a replacement agent UI or require a prompt DSL, proxy, repository restructuring, or alternate model picker.
 
-The release path is:
+Ordinary installations use the normal Codex command automatically:
 
-1. **Zero-Astra current-version gate** — revalidate Codex `0.153.2`, launcher behavior, quota/model reads, and cross-platform CI.
-2. **Window 0** — use only the allowance already remaining before any banked reset to prove the exact Astra identity, quota authority, hooks, receipts, and one or two bounded real product tasks.
-3. **Harden without Astra** — use Sol/Luna/Hermes/CI for ordinary fixes.
-4. **Window 1** — use one banked reset for a clean early-release campaign. Begin with a small pass-through/control segment, then test only evidence-backed efficiency interventions on genuine work.
-5. **Harden without Astra** again.
-6. **Window 2** — wait for the next normal 5-hour availability and validate the release-candidate build. Do not spend the second banked reset merely to accelerate testing.
-7. Publish v0.1 only when [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md) passes.
+- Unix-like: `codex`
+- Windows: `codex.cmd`
 
-See [`docs/ASTRA_WINDOW_0_SHAKEDOWN.md`](docs/ASTRA_WINDOW_0_SHAKEDOWN.md) and [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md).
+If the user's working Codex command is a wrapper or another executable path, CAE can use that exact launcher:
 
-## Current status
+```text
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae doctor
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae probe
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae quota
+```
 
-**Window 0 complete (2026-09-05); original Window 1 candidate suspended after a post-freeze/pre-reset audit found a release-critical readiness defect.**
+The override is one executable path/name, not an arbitrary shell command.
 
-- Exact native model observed: `gpt-6-astra` (native default reasoning `low`).
-- Quota authority observed: `shared_default` / `default` / `limitId=codex` (Codex `0.153.2` via codexu).
-- Window 0: Task 1 PARTIAL (useful), minimal live revalidation PASS, Task 2 PASS (setup/uninstall safety). Real `UserPromptSubmit`/`Stop` hooks proven; privacy proven; setup idempotence and CAE-owned-only uninstall proven and regression-covered; cross-platform CI green (Ubuntu 20/22, Windows 22, macOS 22). Banked resets consumed: 0 (2 remain).
-- Post-freeze audit: supplemental pre-reset evidence only; it confirmed `cae readiness` can report `ready_for_live_hook_capture` without requiring native CAE hooks to be installed. Window 1 has not started and the banked reset remains unspent pending a zero-inference fix and candidate refreeze.
-- Measurement note: Task 2 5h burn is UNAVAILABLE — RESET_CROSSED (no same-window pre-turn baseline); weekly burn 1pt.
-- No Astra efficiency improvement is claimed yet. Window 0 produced integration/correctness fixes only — no validated efficiency intervention.
-- Runtime boundary: codexu (Ubuntu-under-Termux) is the authoritative live-validation runtime. Native Termux Codex is a separate lane (Issue #9) and is NOT claimed.
-- The repository remains private during the Window 1/2 evidence campaign.
+Codex's native hook review/trust prompt remains a real first-run step. CAE does not bypass it.
 
-## Authorities
+## Supported v0.1 boundary
+
+The automated CLI/test surface is validated across Ubuntu, Windows, and macOS with Node.js 20+.
+
+The authoritative Android live-Astra validation runtime is **codexu (Ubuntu-under-Termux)** using the user's real Codex executable.
+
+**Native Termux Codex is a separate compatibility lane and is not part of the declared v0.1 support surface unless that lane passes before release.**
+
+See [`docs/INSTALL.md`](docs/INSTALL.md) and [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md).
+
+## How CAE measures before it optimizes
+
+CAE separates:
+
+1. observed facts;
+2. deterministic measurements;
+3. signals;
+4. efficiency hypotheses;
+5. validated interventions.
+
+A short run is not automatically efficient. An expensive run is not automatically wasteful. Task outcome, validation, scope, rework, quota movement, duration, and eventually native token counters belong together.
+
+The post-v0.1 direction is to learn passively from real Astra work instead of repeatedly spending allowance on artificial benchmarks. Native input/cached/output/reasoning counters, context occupancy, Plus allowance movement, and useful-work outcome must remain distinct measurements.
+
+See:
+
+- [`docs/MEASUREMENT_MODEL.md`](docs/MEASUREMENT_MODEL.md)
+- [`docs/TOKEN_ACCOUNTING.md`](docs/TOKEN_ACCOUNTING.md)
+- [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md)
+
+## Product principles
+
+1. **Native Codex workflow.** No mandatory harness migration, custom agent UI, task DSL, proxy, or repo restructuring.
+2. **Astra means Astra.** CAE does not silently substitute cheaper models.
+3. **Measure before promoting defaults.** Efficiency behavior must be justified by real Plus work.
+4. **Separate quota windows.** 5-hour and weekly limits are tracked independently.
+5. **Unknown stays unknown.** Missing or ambiguous measurement data is never converted into a confident number.
+6. **Do not kill productive work.** CAE does not terminate a useful turn because a threshold was crossed.
+7. **Large work is not waste.** CAE targets avoidable work, not ambitious work.
+8. **Local by default.** Usage evidence stays local unless the user explicitly exports something.
+9. **Minimal interruption.** Warnings and controls should be rare and high-value.
+10. **No quota-circumvention claims.** CAE works around the allowance the user already has; it does not change entitlement.
+
+## Current validation state
+
+As of the current pre-v0.1 candidate:
+
+- Exact native Astra id: `gpt-6-astra`.
+- Native default reasoning observed: `low`.
+- Native quota authority observed on the Plus validation account: `shared_default` / `default` / `limitId=codex`.
+- Window 0 is complete.
+- Real Astra `UserPromptSubmit`/`Stop` hook capture is proven.
+- Privacy-safe opaque session/turn correlation is proven.
+- Setup idempotence and CAE-owned-only uninstall are regression-covered.
+- Cross-platform CI is green on Ubuntu, Windows, and macOS.
+- Readiness now requires both a callable hook command and installed/readable native CAE hooks.
+- Native app-server spawn failure/timeout handling and unknown-reset accounting have been hardened.
+- Current frozen Window 1 candidate: `bae14cebc1858c4f602a5f2cf46a2428ccf932f7`.
+- Window 1 has **not** started and no banked reset has been consumed.
+- CAE does **not** claim a validated default Astra efficiency improvement yet.
+
+Historical validation receipts remain available under [`receipts/`](receipts/). Current release authority is [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md) plus [`trackers/STATE.md`](trackers/STATE.md).
+
+## v0.1 release boundary
+
+The first public release should be trustworthy and usable, not artificially “finished.”
+
+Hard blockers are correctness/safety problems such as misleading quota measurements, false readiness, destructive setup/uninstall, privacy leaks, unexpected non-Astra behavior, ordinary supported CLI crashes/hangs, or materially false installation documentation.
+
+Richer analytics, automatic task classification, broader platform support, and speculative efficiency interventions can follow in later releases when they are validated.
+
+See [`docs/V0_1_RELEASE_PLAN.md`](docs/V0_1_RELEASE_PLAN.md).
+
+## Contributing
+
+Bug reports, measurement anomalies, feature requests, and focused pull requests are welcome after the repository becomes public.
+
+A report is evidence to investigate, not automatically a confirmed bug. Confirmed issues are reproduced and validated before fixes are promoted. Correct community patches can be accepted directly, but they receive the same independent code, test, privacy, dependency, workflow, and security review as maintainer-authored changes.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
+
+## Release/change history
+
+See [`CHANGELOG.md`](CHANGELOG.md).
+
+## Authorities and deeper engineering notes
 
 - [`docs/PRODUCT_CHARTER.md`](docs/PRODUCT_CHARTER.md)
 - [`docs/CODEX_INTEGRATION_RECON.md`](docs/CODEX_INTEGRATION_RECON.md)
@@ -179,9 +201,6 @@ See [`docs/ASTRA_WINDOW_0_SHAKEDOWN.md`](docs/ASTRA_WINDOW_0_SHAKEDOWN.md) and [
 - [`docs/ASTRA_WINDOW_0_SHAKEDOWN.md`](docs/ASTRA_WINDOW_0_SHAKEDOWN.md)
 - [`docs/ASTRA_PLUS_TEST_PLAN.md`](docs/ASTRA_PLUS_TEST_PLAN.md)
 - [`docs/MEASUREMENT_MODEL.md`](docs/MEASUREMENT_MODEL.md)
-- [`docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`](docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md)
-- [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md)
+- [`docs/TOKEN_ACCOUNTING.md`](docs/TOKEN_ACCOUNTING.md)
 - [`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)
 - [`trackers/STATE.md`](trackers/STATE.md)
-- [`receipts/native-runtime-validation-final-2026-09-04.md`](receipts/native-runtime-validation-final-2026-09-04.md)
-- [`receipts/astra-plus-availability-observation-2026-09-04.md`](receipts/astra-plus-availability-observation-2026-09-04.md)
