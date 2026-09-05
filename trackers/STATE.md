@@ -4,11 +4,28 @@ Last updated: 2026-09-05
 
 ## Current phase
 
-**WINDOW 0 TASK 1 COMPLETE / NON-ASTRA HARDENING**
+**WINDOW 0 TASK 1 + LIVE REVALIDATION COMPLETE / TASK 2 PREPARATION**
 
-Task 1 outcome: PARTIAL. 5h burn 7pt (93 -> 86), weekly burn 1pt (17 -> 16). Hooks captured 0 events despite installed config. limitId defect confirmed via Astra finding. No banked reset consumed. Task 2 BLOCKED pending hook-path revalidation.
+Non-inference status:
 
-Receipt: `receipts/window-0-live-task-1-2026-09-04.md`.
+- PR #11 (Windows hook-command hardening) merged to main: merge commit `0a22a2a4f37fdb8572a3307bdcb13e2c71d9e6da`.
+- Windows CI PASS on the merged head; full matrix (Ubuntu Node 20/22, Windows Node 22, macOS Node 22) green.
+- Window 0 minimal live revalidation PASS (see history below).
+- limitId stability fix merged and regression-covered.
+- Real hook capture PASS (`UserPromptSubmit` + `Stop`, exact `gpt-6-astra`).
+- Rootfs sandboxed writes PASS (create/verify/delete, no sandbox-helper 182).
+- Task 1 outcome: PARTIAL but useful — hook-path executable-mode defect found and fixed, limitId fix validated, live hook path proven.
+- Banked resets: still 2 available; 0 consumed during revalidation.
+- Task 2 (setup/uninstall safety) is authorized for consideration as the intended final substantive Window 0 task.
+- No Astra efficiency claim has been made yet; none may be claimed from revalidation data alone.
+
+Pre-live Task 2 contract: `docs/WINDOW0_TASK2_CONTRACT.md`. Task 2 executes with one live Astra turn only after the Task 2 branch is green, CAE is linked to the Task 2 checkout, and readiness is `ready_for_live_hook_capture`.
+
+Receipts: `receipts/window-0-live-task-1-2026-09-04.md`, `receipts/window-0-minimal-live-revalidation-2026-09-05.md`.
+
+## Historical: Task 1 blocked status (superseded 2026-09-05)
+
+Task 1 outcome: PARTIAL. 5h burn 7pt (93 -> 86), weekly burn 1pt (17 -> 16). Hooks captured 0 events despite installed config. limitId defect confirmed via Astra finding. No banked reset consumed. Task 2 was BLOCKED pending hook-path revalidation — that block is lifted by the live revalidation PASS recorded below.
 
 ## Locked product direction
 
@@ -111,13 +128,13 @@ Repository commit tested: `41c8a2af2f7478b4c5091eff38edbc6f331aaedb`
 
 ### Remaining Window 0 gates
 
-- exact target configuration: **READY — NOT YET EXECUTED**
-- readiness after target set: **PENDING**
-- hook dry-run/setup: **PENDING**
-- live Astra `UserPromptSubmit`/`Stop` identity: **PENDING**
-- live non-Astra no-op recheck: **PENDING**
-- first bounded real Astra task: **PENDING**
-- first Window 0 run receipt: **PENDING**
+- exact target configuration: **DONE (revalidated live 2026-09-05)**
+- readiness after target set: **DONE — `ready_for_live_hook_capture`**
+- hook dry-run/setup: **DONE (installed, ownership reviewed)**
+- live Astra `UserPromptSubmit`/`Stop` identity: **DONE — PASS (revalidation)**
+- live non-Astra no-op recheck: **covered by unit tests; live recheck optional before release**
+- first bounded real Astra task: **Task 1 done (PARTIAL); Task 2 authorized as final substantive Window 0 task**
+- first Window 0 run receipt: **DONE — `receipts/window-0-minimal-live-revalidation-2026-09-05.md`**
 - Astra efficiency improvement: **NOT YET CLAIMED**
 
 ## Launcher issue disposition
@@ -159,8 +176,9 @@ without proving the configured hook executable callable. Recommended minimal
 pre-Window-1 change: `cae doctor`/`readiness` must verify the configured hook
 command resolves and is executable.
 
-Task 2 remains BLOCKED pending one minimal live revalidation turn from the
-rootfs workspace after hook-path fix.
+~~Task 2 remains BLOCKED pending one minimal live revalidation turn from the
+rootfs workspace after hook-path fix.~~ Superseded: the live revalidation turn
+below passed, and Task 2 is now authorized for consideration.
 
 ## Window 0 minimal live revalidation — PASS (2026-09-05)
 
@@ -186,7 +204,11 @@ Real Astra hook path is now proven after executable-mode remediation.
 limitId fix remains validated. Task 2 may now be reconsidered by
 coordination. No banked reset consumed. No Task 2 started.
 
-## Immediate execution queue
+## Historical: immediate execution queue (superseded 2026-09-05)
+
+The pre-revalidation queue below is complete/superseded. Steps 1–7 are done
+(merge, exact target configuration, readiness, hook install, live hook
+identity, receipt). It is retained for history only.
 
 1. Merge the live-preflight authority update after CI passes.
 2. In `codexu`, configure exactly `gpt-6-astra` using the native-discovery command.
@@ -198,6 +220,16 @@ coordination. No banked reset consumed. No Task 2 started.
 8. If weekly burn is small and interpretable, consider one second bounded task; otherwise stop Astra and harden with non-Astra tools.
 9. After Window 0, fix/disposition defects with Sol/Luna/Hermes/CI.
 10. Freeze the Window 1 candidate before using one banked reset.
+
+## Current queue: Window 0 Task 2 preparation
+
+1. Task 2 branch `window0/task2-install-safety` green locally (`npm test` ~83, `npm run check`).
+2. `npm link` the Task 2 checkout so the live CAE CLI is this checkout.
+3. `cae doctor` and `cae readiness` must pass through `/root/.local/bin/codex` with hook command available, hooks installed, and `ready_for_live_hook_capture`.
+4. Capture the fresh Task 2 baseline (`cae quota`, `cae events`) immediately before the single live turn.
+5. One live Astra turn executes `docs/WINDOW0_TASK2_CONTRACT.md` (setup/uninstall safety audit, at most one defect fix).
+6. Capture the after-state, verify hooks/privacy/worktree, compute 5h and weekly burn separately.
+7. Task 2 is the intended final substantive Window 0 task regardless of outcome; harden afterward without Astra. No Window 1 start; no banked reset.
 
 ## Explicitly deferred
 
@@ -213,4 +245,4 @@ coordination. No banked reset consumed. No Task 2 started.
 
 ## Release posture
 
-CAE is **live-Astra ready but not yet live-Astra validated**. The pre-inference gate is complete in `codexu`; the next step is exact target configuration, hook installation, and the first controlled real Astra task using only the remaining pre-reset allowance.
+CAE is **live-Astra validated** (revalidation PASS, 2026-09-05): exact target, hook capture, and rootfs sandboxed writes are proven on the authoritative runtime. Not yet claimed: any Astra efficiency improvement. Next: Window 0 Task 2 (setup/uninstall safety, one live turn), then non-Astra hardening only. Window 1 waits for a banked reset decision.
