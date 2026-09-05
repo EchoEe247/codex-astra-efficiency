@@ -162,6 +162,30 @@ command resolves and is executable.
 Task 2 remains BLOCKED pending one minimal live revalidation turn from the
 rootfs workspace after hook-path fix.
 
+## Window 0 minimal live revalidation — PASS (2026-09-05)
+
+**WINDOW 0 MINIMAL LIVE REVALIDATION PASS.**
+
+One real Astra turn (`gpt-6-astra`, reasoning `low`, 0 subagents) from
+`/root/work/codex-astra-efficiency`:
+
+- real `UserPromptSubmit` + `Stop` persisted, exact model, opaque session/turn
+  correlation stable, privacy clean;
+- rootfs sandboxed writes proven: probe created with exact content
+  `CAE_WINDOW0_WRITE_OK`, verified, removed via `apply_patch`;
+- no sandbox-helper 182; worktree clean afterward;
+- quota: 5h 100% -> 97% (3pt burn), weekly 16% -> 15% (1pt burn),
+  authority `shared_default/default/limitId=codex`, reset credits 2 untouched;
+- product fix validated: `cae doctor`/`readiness` confirm hook command
+  callable, no false `hook_command_unavailable`;
+- `npm test` 68/68, `npm run check` clean.
+
+Receipt: `receipts/window-0-minimal-live-revalidation-2026-09-05.md`.
+
+Real Astra hook path is now proven after executable-mode remediation.
+limitId fix remains validated. Task 2 may now be reconsidered by
+coordination. No banked reset consumed. No Task 2 started.
+
 ## Immediate execution queue
 
 1. Merge the live-preflight authority update after CI passes.
