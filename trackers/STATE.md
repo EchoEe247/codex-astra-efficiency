@@ -84,6 +84,7 @@ npm test
 npm run check
 CAE_CODEX_COMMAND=/usr/bin/codex cae doctor
 CAE_CODEX_COMMAND=/usr/bin/codex cae probe
+CAE_CODEX_COMMAND=/usr/bin/codex cae readiness
 CAE_CODEX_COMMAND=/usr/bin/codex cae quota
 ```
 
@@ -121,7 +122,7 @@ Implemented:
 - the same resolved launcher is used for app-server reads and Codex version reporting;
 - the value is treated as one executable path/name, not a shell command.
 
-Issue #6 remains open until `cae doctor`, `cae probe`, and `cae quota` pass locally through `/usr/bin/codex` on the current Termux/Codex runtime.
+Issue #6 remains open until `cae doctor`, `cae probe`, `cae readiness`, and `cae quota` pass locally through `/usr/bin/codex` on the current Termux/Codex runtime.
 
 ## Technical foundation
 
@@ -133,22 +134,26 @@ Implemented:
 - no raw prompt, assistant response, cwd, transcript path, or raw session/turn id in baseline events;
 - non-destructive hook merge/removal with idempotence coverage;
 - atomic setup/uninstall honoring `CODEX_HOME`;
-- `cae doctor`, `probe`, `quota`, `events`, setup/uninstall dry-runs, and private target controls;
+- `cae doctor`, `probe`, `readiness`, `quota`, `events`, setup/uninstall dry-runs, and private target controls;
 - native Codex app-server client for `account/rateLimits/read` and `model/list`;
 - duration-based 300-minute / 10,080-minute normalization;
 - explicit missing, malformed, partial, and conflicting quota states;
 - reset-aware before/after allowance deltas;
 - purchased-credit/reset-credit preservation without invented units;
 - model-aware quota authority selection using exact `normalModelSlug` when available and labeled `shared_default` otherwise;
-- receipt schema v2 for task shape, outcome quality, intervention burden, tool classes, and quota deltas;
+- zero-inference readiness summary that refuses target authority when the model catalog is incomplete;
+- receipt schema v3 with campaign and cause classification plus task shape, outcome quality, intervention burden, tool classes, and quota deltas;
 - measurement evidence hierarchy in `docs/MEASUREMENT_MODEL.md`;
 - early Astra Pro usage evidence in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md`;
 - prior-art authority in `docs/PRIOR_ART.md`.
 
 ## Validation status
 
-- Cross-platform unit/source CI on main before Window 0 prep: **PASS** on Ubuntu Node 20, Ubuntu Node 22, Windows Node 22.
-- macOS Node 22 CI: **ADDED ON WINDOW-0 PREP BRANCH; MUST PASS BEFORE MERGE**.
+- Window 0 prep PR #7 CI run #86: **PASS**.
+- Ubuntu Node 20: **PASS**.
+- Ubuntu Node 22: **PASS**.
+- Windows Node 22: **PASS**.
+- macOS Node 22: **PASS**.
 - Real installed Codex A-F runtime validation: **PASS on Termux/Codex 0.149.0; CURRENT 0.153.2 REVALIDATION REQUIRED**.
 - Signed-in Plus app-server quota read: **PASS historically through the working wrapper; current-version revalidation required**.
 - Side-by-side app-server read with active Codex: **PASS on 0.149.0**.
@@ -163,13 +168,13 @@ Implemented:
 
 ## Immediate execution queue
 
-1. Merge Window 0 preparation only after Ubuntu/Windows/macOS CI passes.
-2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `cae doctor`, `cae probe`, and `cae quota`.
+1. Merge Window 0 preparation after the green PR #7 cross-platform CI result is accepted.
+2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `cae doctor`, `cae probe`, `cae readiness`, and `cae quota`.
 3. Close Issue #6 only if that local launcher acceptance passes without the previous manual workaround.
 4. Run Gate G without spending unnecessary Astra inference: native catalog candidate -> exact target config -> native picker/active model identity -> exact hook identity -> quota-authority selection.
-5. Run Window 0 according to `docs/ASTRA_WINDOW_0_SHAKEDOWN.md` using only the remaining pre-reset allowance.
+5. Run Window 0 under Issue #8 using only the remaining pre-reset allowance.
 6. Turn Astra off; fix/harden with Sol/Luna/Hermes/CI.
-7. Freeze the Window 1 candidate, then use one banked reset for the clean early-release campaign.
+7. Freeze the Window 1 candidate, then use one banked reset for Issue #5's clean early-release campaign.
 8. After Window 1, harden again without Astra.
 9. Wait for the next normal 5-hour availability and run Window 2 release-candidate validation.
 10. Publish v0.1 only after `docs/RELEASE_CRITERIA.md` passes.
@@ -187,4 +192,4 @@ Implemented:
 
 ## Release posture
 
-CAE is **Astra-live but not yet Astra-validated**. The native foundation is strong enough to begin the controlled Window 0 shakedown once current-version compatibility and launcher acceptance are confirmed.
+CAE is **Astra-live but not yet Astra-validated**. Cross-platform CI now includes macOS and is green. The next blocker is current Termux/Codex `0.153.2` zero-inference acceptance before the controlled Window 0 live Astra task.
