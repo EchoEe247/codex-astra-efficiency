@@ -44,6 +44,20 @@ export function summarizeAstraReadiness({
   const quota = normalizeRateLimitResponse(rateLimitPayload);
   const configured = parseModelIds(configuredModelIds);
 
+  // A later catalog page could contain another Astra entry and change a
+  // single candidate into an ambiguous result, so an incomplete catalog is
+  // never sufficient authority for target configuration.
+  if (discovery.nextCursorPresent) {
+    return {
+      status: "model_catalog_incomplete",
+      discovery,
+      configuredModelIds: configured,
+      resetCreditsAvailable: quota.resetCreditsAvailable,
+      authority: { status: "unavailable", reason: "model_catalog_has_more_pages" },
+      nextAction: "read the complete native model catalog before configuring Astra"
+    };
+  }
+
   if (discovery.status === "not_found") {
     return {
       status: "astra_not_found",
