@@ -100,7 +100,7 @@ Issue #6 launcher-equivalence acceptance for the authoritative `codexu` runtime:
 
 `doctor`, `probe`, `readiness`, and `quota` all passed through the actual working Ubuntu launcher `/root/.local/bin/codex` without the prior resolver workaround.
 
-This does **not** claim native Termux Codex health. Native Termux is tracked independently in Issue #9.
+This does **not** claim native Termux Codex health. The earlier `/usr/bin/codex` acceptance assumption was not correct for `codexu`: Ubuntu `/usr/bin/codex` is absent, while the Termux-side `/data/data/com.termux/files/usr/bin/codex` is a different shim. Native Termux is tracked independently in Issue #9.
 
 ## Privacy
 
