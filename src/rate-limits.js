@@ -369,7 +369,11 @@ export function calculateModelUsageDelta(startResponse, endResponse, model) {
     };
   }
 
-  if (startAuthority.kind !== endAuthority.kind || startAuthority.key !== endAuthority.key) {
+  if (
+    startAuthority.kind !== endAuthority.kind ||
+    startAuthority.key !== endAuthority.key ||
+    startAuthority.limitId !== endAuthority.limitId
+  ) {
     return {
       authority: {
         status: "authority_changed",

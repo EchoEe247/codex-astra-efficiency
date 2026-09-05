@@ -1,4 +1,5 @@
 import { parseModelIds } from "./config.js";
+import { HOOK_COMMAND_UNAVAILABLE } from "./hook-command.js";
 import { summarizeAstraDiscovery } from "./model-discovery.js";
 import { normalizeRateLimitResponse, selectUsageAuthority } from "./rate-limits.js";
 
@@ -38,7 +39,8 @@ function summarizeAuthority(authority) {
 export function summarizeAstraReadiness({
   modelPayload,
   rateLimitPayload,
-  configuredModelIds = []
+  configuredModelIds = [],
+  hookCommand = null
 } = {}) {
   const discovery = summarizeAstraDiscovery(modelPayload);
   const quota = normalizeRateLimitResponse(rateLimitPayload);
@@ -85,8 +87,11 @@ export function summarizeAstraReadiness({
   let status = "ready_for_live_hook_capture";
   if (!targetConfigured) status = "target_configuration_required";
   else if (authority.status !== "selected") status = "quota_authority_unresolved";
+  else if (hookCommand && hookCommand.available !== true) {
+    status = HOOK_COMMAND_UNAVAILABLE;
+  }
 
-  return {
+  const result = {
     status,
     candidate,
     targetConfigured,
@@ -98,6 +103,10 @@ export function summarizeAstraReadiness({
         ? `cae target set ${candidate.model}`
         : status === "ready_for_live_hook_capture"
           ? "select Astra in native /model and capture live hook identity"
-          : "resolve quota authority before interpreting Astra usage deltas"
+          : status === HOOK_COMMAND_UNAVAILABLE
+            ? "repair the CAE hook command installation before live capture"
+            : "resolve quota authority before interpreting Astra usage deltas"
   };
+  if (hookCommand !== null) result.hookCommand = hookCommand;
+  return result;
 }
