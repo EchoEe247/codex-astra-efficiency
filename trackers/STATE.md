@@ -4,24 +4,59 @@ Last updated: 2026-09-05
 
 ## Current phase
 
-**WINDOW 0 TASK 1 + LIVE REVALIDATION COMPLETE / TASK 2 PREPARATION**
+**WINDOW 0 COMPLETE / PRE-WINDOW-1 HARDENING**
 
-Non-inference status:
+Window 0 is CLOSED. No more Astra inference belongs to Window 0. All
+substantive Window 0 evidence:
 
-- PR #11 (Windows hook-command hardening) merged to main: merge commit `0a22a2a4f37fdb8572a3307bdcb13e2c71d9e6da`.
-- Windows CI PASS on the merged head; full matrix (Ubuntu Node 20/22, Windows Node 22, macOS Node 22) green.
-- Window 0 minimal live revalidation PASS (see history below).
-- limitId stability fix merged and regression-covered.
-- Real hook capture PASS (`UserPromptSubmit` + `Stop`, exact `gpt-6-astra`).
-- Rootfs sandboxed writes PASS (create/verify/delete, no sandbox-helper 182).
-- Task 1 outcome: PARTIAL but useful — hook-path executable-mode defect found and fixed, limitId fix validated, live hook path proven.
-- Banked resets: still 2 available; 0 consumed during revalidation.
-- Task 2 (setup/uninstall safety) is authorized for consideration as the intended final substantive Window 0 task.
-- No Astra efficiency claim has been made yet; none may be claimed from revalidation data alone.
+### Window 0 evidence
 
-Pre-live Task 2 contract: `docs/WINDOW0_TASK2_CONTRACT.md`. Task 2 executes with one live Astra turn only after the Task 2 branch is green, CAE is linked to the Task 2 checkout, and readiness is `ready_for_live_hook_capture`.
+**Task 1** (receipt `receipts/window-0-live-task-1-2026-09-04.md`):
+- PARTIAL but useful.
+- 7pt 5h burn, 1pt weekly burn.
+- Found the limitId authority bug (kind+key match wrongly treated as stable).
+- Exposed the hook executable/setup gap (global install bin mode 600 → hooks
+  never fired).
+- Exposed the Android-mounted sandbox write failure (sandbox-helper 182).
 
-Receipts: `receipts/window-0-live-task-1-2026-09-04.md`, `receipts/window-0-minimal-live-revalidation-2026-09-05.md`.
+**Non-Astra hardening** (2026-09-04/05, zero inference):
+- limitId stability fix merged (regression-covered).
+- Hook command readiness added to `cae doctor`/`readiness` (probe `--help`,
+  never fires hooks).
+- Windows portability fixed (PR #11: platform path semantics, PATHEXT
+  injection, ComSpec dispatch for `.cmd`/`.bat`).
+- Rootfs workspace `/root/work/codex-astra-efficiency` adopted for live work.
+
+**Minimal live revalidation** (receipt `receipts/window-0-minimal-live-revalidation-2026-09-05.md`):
+- PASS.
+- 3pt 5h burn, 1pt weekly burn.
+- Real `UserPromptSubmit` + `Stop` hooks PASS; privacy PASS.
+- Rootfs sandboxed writes PASS (create/verify/delete; no sandbox-helper 182).
+
+**Task 2** (receipt `receipts/window-0-task-2-2026-09-05.md`):
+- PASS. Final substantive Window 0 task (setup/uninstall safety).
+- 2pt 5h burn, 1pt weekly burn (fresh native snapshots: 95%→93% 5h,
+  15%→14% weekly; the 5h window rolled between baseline and capture).
+- Uninstall ownership defect found and fixed (unrelated empty hook groups and
+  event arrays were deleted without CAE ownership); two focused regressions.
+- Setup idempotence PASS; no scope expansion; no rework.
+- Cross-platform CI PASS on PR #12 (Ubuntu Node 20/22, Windows Node 22,
+  macOS Node 22) — including the Windows validation Astra recommended.
+
+**Banked resets: 2 remaining; 0 consumed by Window 0.**
+
+### Next phase
+
+PRE-WINDOW-1 HARDENING / CANDIDATE FREEZE.
+
+Window 1 must NOT start until:
+- Task 2 PR (#12) merged to main;
+- main green after merge;
+- remaining release-critical non-inference gaps reviewed;
+- candidate frozen;
+- one banked reset explicitly authorized by coordination.
+
+Pre-live Task 2 contract (historical, executed): `docs/WINDOW0_TASK2_CONTRACT.md`.
 
 ## Historical: Task 1 blocked status (superseded 2026-09-05)
 
@@ -131,11 +166,11 @@ Repository commit tested: `41c8a2af2f7478b4c5091eff38edbc6f331aaedb`
 - exact target configuration: **DONE (revalidated live 2026-09-05)**
 - readiness after target set: **DONE — `ready_for_live_hook_capture`**
 - hook dry-run/setup: **DONE (installed, ownership reviewed)**
-- live Astra `UserPromptSubmit`/`Stop` identity: **DONE — PASS (revalidation)**
+- live Astra `UserPromptSubmit`/`Stop` identity: **DONE — PASS (revalidation + Task 2)**
 - live non-Astra no-op recheck: **covered by unit tests; live recheck optional before release**
-- first bounded real Astra task: **Task 1 done (PARTIAL); Task 2 authorized as final substantive Window 0 task**
-- first Window 0 run receipt: **DONE — `receipts/window-0-minimal-live-revalidation-2026-09-05.md`**
-- Astra efficiency improvement: **NOT YET CLAIMED**
+- first bounded real Astra task: **DONE — Task 1 (PARTIAL), revalidation (PASS), Task 2 (PASS)**
+- first Window 0 run receipt: **DONE — revalidation + `receipts/window-0-task-2-2026-09-05.md`**
+- Astra efficiency improvement: **NOT YET CLAIMED (and not claimable from Window 0 data)**
 
 ## Launcher issue disposition
 
@@ -221,15 +256,12 @@ identity, receipt). It is retained for history only.
 9. After Window 0, fix/disposition defects with Sol/Luna/Hermes/CI.
 10. Freeze the Window 1 candidate before using one banked reset.
 
-## Current queue: Window 0 Task 2 preparation
+## Historical: Task 2 preparation queue (superseded 2026-09-05 — Task 2 complete)
 
-1. Task 2 branch `window0/task2-install-safety` green locally (`npm test` ~83, `npm run check`).
-2. `npm link` the Task 2 checkout so the live CAE CLI is this checkout.
-3. `cae doctor` and `cae readiness` must pass through `/root/.local/bin/codex` with hook command available, hooks installed, and `ready_for_live_hook_capture`.
-4. Capture the fresh Task 2 baseline (`cae quota`, `cae events`) immediately before the single live turn.
-5. One live Astra turn executes `docs/WINDOW0_TASK2_CONTRACT.md` (setup/uninstall safety audit, at most one defect fix).
-6. Capture the after-state, verify hooks/privacy/worktree, compute 5h and weekly burn separately.
-7. Task 2 is the intended final substantive Window 0 task regardless of outcome; harden afterward without Astra. No Window 1 start; no banked reset.
+All steps executed: Task 2 branch green, checkout linked, doctor/readiness
+pass, fresh baseline captured, one live Astra turn executed the contract,
+after-state captured, PR #12 green across the full matrix. Retained for
+history only.
 
 ## Explicitly deferred
 
@@ -245,4 +277,4 @@ identity, receipt). It is retained for history only.
 
 ## Release posture
 
-CAE is **live-Astra validated** (revalidation PASS, 2026-09-05): exact target, hook capture, and rootfs sandboxed writes are proven on the authoritative runtime. Not yet claimed: any Astra efficiency improvement. Next: Window 0 Task 2 (setup/uninstall safety, one live turn), then non-Astra hardening only. Window 1 waits for a banked reset decision.
+CAE is **live-Astra validated end-to-end** (Window 0 closed 2026-09-05): exact target, real hook capture, rootfs sandboxed writes, and the full setup/uninstall safety audit all pass on the authoritative runtime, with cross-platform CI green. Not yet claimed: any Astra efficiency improvement. Next: pre-Window-1 hardening and candidate freeze; Window 1 waits for a merged, green main and an explicitly authorized banked reset.
