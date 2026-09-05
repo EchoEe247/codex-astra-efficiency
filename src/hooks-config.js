@@ -71,6 +71,7 @@ export function uninstallCaeHooks(config, command = CAE_HOOK_COMMAND) {
     }
 
     const cleaned = [];
+    let removedCaeHandler = false;
     for (const group of groups) {
       if (!group || typeof group !== "object" || Array.isArray(group)) {
         cleaned.push(group);
@@ -84,11 +85,18 @@ export function uninstallCaeHooks(config, command = CAE_HOOK_COMMAND) {
       const remainingHandlers = group.hooks.filter(
         (handler) => !isCaeHandler(handler, command)
       );
+      if (remainingHandlers.length === group.hooks.length) {
+        cleaned.push(group);
+        continue;
+      }
+      removedCaeHandler = true;
       if (remainingHandlers.length > 0) {
         cleaned.push({ ...group, hooks: remainingHandlers });
       }
     }
 
+    // Empty user groups/events are not evidence of CAE ownership.
+    if (!removedCaeHandler) continue;
     if (cleaned.length > 0) next.hooks[eventName] = cleaned;
     else delete next.hooks[eventName];
   }
