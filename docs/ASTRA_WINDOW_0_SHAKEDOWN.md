@@ -29,6 +29,8 @@ Window 0 should answer:
 
 ## Gate W0-A — zero-inference preparation
 
+The earlier authoritative A-F runtime validation used Codex `0.149.0`, while the latest operator `/status` observation reports `0.153.2`. Treat that drift as a compatibility gate rather than assuming unchanged behavior.
+
 Complete before sending a prompt to Astra:
 
 ```text
@@ -37,8 +39,11 @@ npm run check
 
 CAE_CODEX_COMMAND=/usr/bin/codex cae doctor
 CAE_CODEX_COMMAND=/usr/bin/codex cae probe
+CAE_CODEX_COMMAND=/usr/bin/codex cae readiness
 CAE_CODEX_COMMAND=/usr/bin/codex cae quota
 ```
+
+`cae readiness` is read-only. It combines the native model catalog, configured Astra target, reset-credit state, and model-aware quota authority into one pre-inference result. It never silently sets a target or selects a model.
 
 Then record, without guessing:
 
@@ -46,19 +51,24 @@ Then record, without guessing:
 - exact Astra candidate/model id returned by the native catalog;
 - whether model discovery is unique or ambiguous;
 - current 5-hour and weekly snapshots;
-- quota-authority kind (`exact_model`, `shared_default`, or other observed state);
+- quota-authority kind (`model_bucket`, `model_default`, `shared_default`, or other observed state);
 - reset-credit count if natively exposed;
 - CAE target configuration before the run.
+
+If `cae readiness` returns `target_configuration_required`, execute only the exact command it reports after verifying the candidate is the native Astra entry, then re-run `cae readiness`.
+
+If it returns `astra_discovery_ambiguous`, `quota_authority_unresolved`, or `native_read_unavailable`, stop before Astra inference and diagnose the zero-inference path first.
 
 Issue #6 remains open unless the launcher commands above pass through the normal wrapper without the prior manual workaround.
 
 ## Gate W0-B — live Astra identity
 
 1. Set/verify the exact target only after native model discovery identifies the production Astra id.
-2. Launch normal Codex.
-3. Select Astra through `/model`.
-4. Confirm the live `UserPromptSubmit`/`Stop` hook model identity exactly matches the configured target.
-5. Confirm a non-Astra model remains a strict no-op after the live Astra check.
+2. Re-run `cae readiness` and require the pre-hook state to be understood.
+3. Launch normal Codex.
+4. Select Astra through `/model`.
+5. Confirm the live `UserPromptSubmit`/`Stop` hook model identity exactly matches the configured target.
+6. Confirm a non-Astra model remains a strict no-op after the live Astra check.
 
 Do not infer the slug from marketing names or documentation when the native picker/runtime exposes an exact id.
 
@@ -76,6 +86,7 @@ This is useful product work even if the result is PARTIAL or FAIL_USEFUL.
 
 At the first meaningful task boundary, capture:
 
+- campaign: `window_0`;
 - 5-hour before/after and delta;
 - weekly before/after and delta;
 - quota-authority kind and stability;
@@ -89,6 +100,7 @@ At the first meaningful task boundary, capture:
 - scope expansion;
 - validation result;
 - outcome: `PASS`, `PARTIAL`, `FAIL_USEFUL`, or `FAIL_WASTE`;
+- cause class: `MODEL`, `USER_TASK`, `CAE`, `MIXED`, or `UNKNOWN`;
 - rework required.
 
 Do not convert a partial-window percentage into a claim about full-window capacity.
