@@ -97,3 +97,77 @@ test("missing Astra remains explicit and does not infer availability", () => {
   assert.equal(result.status, "astra_not_found");
   assert.equal(result.discovery.candidates.length, 0);
 });
+
+test("native hook readiness gating regression tests", () => {
+  const commonArgs = {
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: sharedQuota(),
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true }
+  };
+
+  // Case 1: readable=true, installed=false -> should fail ready and report native_hooks_not_installed
+  const case1 = summarizeAstraReadiness({
+    ...commonArgs,
+    nativeHooks: { readable: true, installed: false }
+  });
+  assert.equal(case1.status, "native_hooks_not_installed");
+  assert.equal(case1.nextAction, "run cae setup and complete native Codex hook review before live capture");
+
+  // Case 2: readable=false, installed=false -> should report native_hooks_unavailable
+  const case2 = summarizeAstraReadiness({
+    ...commonArgs,
+    nativeHooks: { readable: false, installed: false }
+  });
+  assert.equal(case2.status, "native_hooks_unavailable");
+  assert.equal(case2.nextAction, "repair/read the native Codex hook configuration before live capture");
+
+  // Case 3: readable=true, installed=true -> should be fully ready
+  const case3 = summarizeAstraReadiness({
+    ...commonArgs,
+    nativeHooks: { readable: true, installed: true }
+  });
+  assert.equal(case3.status, "ready_for_live_hook_capture");
+});
+
+test("native hook readiness gating precedence", () => {
+  // 1. Target not configured takes precedence over quota unresolved, hook command unavailable, native hooks uninstalled
+  const prec1 = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: { rateLimits: null }, // unresolved
+    configuredModelIds: [], // not configured
+    hookCommand: { available: false, reason: "hook_command_missing" },
+    nativeHooks: { readable: true, installed: false }
+  });
+  assert.equal(prec1.status, "target_configuration_required");
+
+  // 2. Quota unresolved takes precedence over hook command unavailable, native hooks uninstalled
+  const prec2 = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: { rateLimits: null }, // unresolved
+    configuredModelIds: ["gpt-6-astra"], // configured
+    hookCommand: { available: false, reason: "hook_command_missing" },
+    nativeHooks: { readable: true, installed: false }
+  });
+  assert.equal(prec2.status, "quota_authority_unresolved");
+
+  // 3. Hook command unavailable takes precedence over native hooks uninstalled/unreadable
+  const prec3 = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: sharedQuota(), // resolved
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: false, reason: "hook_command_missing" },
+    nativeHooks: { readable: false, installed: false }
+  });
+  assert.equal(prec3.status, "hook_command_unavailable");
+
+  // 4. Native hook unreadable takes precedence over native hooks not installed
+  const prec4 = summarizeAstraReadiness({
+    modelPayload: catalog(astra("gpt-6-astra")),
+    rateLimitPayload: sharedQuota(),
+    configuredModelIds: ["gpt-6-astra"],
+    hookCommand: { available: true },
+    nativeHooks: { readable: false, installed: false }
+  });
+  assert.equal(prec4.status, "native_hooks_unavailable");
+});
