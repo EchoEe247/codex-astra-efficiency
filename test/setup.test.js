@@ -114,3 +114,36 @@ test("configured CODEX_HOME must already exist before install", () => {
     fs.rmSync(home, { recursive: true, force: true });
   }
 });
+
+test("uninstall leaves unrelated empty hooks byte-for-byte intact across setup cycles", () => {
+  const home = tempHome();
+  try {
+    const codexHome = path.join(home, ".codex");
+    fs.mkdirSync(codexHome);
+    const file = path.join(codexHome, "hooks.json");
+    const original = {
+      custom: "keep",
+      hooks: { UserPromptSubmit: [{ matcher: "reserved", hooks: [] }], Stop: [{ hooks: [] }] }
+    };
+    const raw = JSON.stringify(original);
+    fs.writeFileSync(file, raw);
+    const options = { env: {}, homeDir: home };
+
+    const initial = applyHookSetup({ ...options, action: "uninstall" });
+    assert.equal(initial.changed, false);
+    assert.equal(initial.applied, false);
+    assert.equal(fs.readFileSync(file, "utf8"), raw);
+
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      assert.equal(applyHookSetup({ ...options, action: "install" }).applied, true);
+      assert.equal(applyHookSetup({ ...options, action: "install" }).applied, false);
+      assert.equal(applyHookSetup({ ...options, action: "uninstall" }).applied, true);
+      assert.deepEqual(JSON.parse(fs.readFileSync(file, "utf8")), original);
+      const afterRemoval = fs.readFileSync(file, "utf8");
+      assert.equal(applyHookSetup({ ...options, action: "uninstall" }).applied, false);
+      assert.equal(fs.readFileSync(file, "utf8"), afterRemoval);
+    }
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});

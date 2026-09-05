@@ -72,3 +72,23 @@ test("malformed existing event array is rejected instead of overwritten", () => 
 test("parseHooksConfig accepts empty content as an empty config", () => {
   assert.deepEqual(parseHooksConfig(""), {});
 });
+
+test("uninstall preserves unrelated empty groups and event arrays", () => {
+  const input = {
+    custom: { keep: true },
+    hooks: {
+      UserPromptSubmit: [{ matcher: "reserved", hooks: [], custom: "keep" }],
+      Stop: [{ hooks: [] }]
+    }
+  };
+
+  const emptyEvents = { hooks: { UserPromptSubmit: [], Stop: [] } };
+  assert.deepEqual(uninstallCaeHooks(emptyEvents), emptyEvents);
+  assert.deepEqual(uninstallCaeHooks(input), input);
+  const installed = installCaeHooks(input);
+  assert.deepEqual(installCaeHooks(installed), installed);
+  const removed = uninstallCaeHooks(installed);
+  assert.deepEqual(removed, input);
+  assert.deepEqual(uninstallCaeHooks(removed), input);
+  assert.deepEqual(uninstallCaeHooks(installCaeHooks(removed)), input);
+});
