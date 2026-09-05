@@ -35,8 +35,10 @@ substantive Window 0 evidence:
 
 **Task 2** (receipt `receipts/window-0-task-2-2026-09-05.md`):
 - PASS. Final substantive Window 0 task (setup/uninstall safety).
-- 2pt 5h burn, 1pt weekly burn (fresh native snapshots: 95%→93% 5h,
-  15%→14% weekly; the 5h window rolled between baseline and capture).
+- 5h burn: UNAVAILABLE — RESET_CROSSED (old-window snapshot 95% @1788601794,
+  after snapshot 93% @1788624929; no same-window pre-turn baseline; the 2pt
+  numerical difference is NOT a Task 2 burn). Weekly burn 1pt (15%→14%,
+  epoch 1788793830 stable).
 - Uninstall ownership defect found and fixed (unrelated empty hook groups and
   event arrays were deleted without CAE ownership); two focused regressions.
 - Setup idempotence PASS; no scope expansion; no rework.
