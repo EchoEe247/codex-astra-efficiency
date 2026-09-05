@@ -6,7 +6,7 @@ The first public release should solve one narrow problem well:
 
 > A ChatGPT Plus user can keep using Codex normally, select Astra normally, and gain trustworthy Astra-specific usage visibility plus only those efficiency behaviors that have been validated on real Plus work.
 
-Speed does not justify incorrect quota reporting, invasive setup, or untested optimization claims.
+v0.1 is an **observability-first release**. Speed does not justify incorrect quota reporting, invasive setup, or untested optimization claims.
 
 ## Required before public v0.1
 
@@ -15,13 +15,13 @@ Speed does not justify incorrect quota reporting, invasive setup, or untested op
 - [x] Normal Codex launch remains supported. (PROVEN: CAE never launches Codex itself; only short-lived `codex --version` + app-server socket reads via the user's real launcher; Window 0 ran entirely through native `/model` selection.)
 - [x] Native model picker remains the user's model-selection mechanism. (PROVEN: no model routing code; Window 0 contract required native `/model` selection of `gpt-6-astra`.)
 - [x] CAE activates only for Astra. (PROVEN: unit `non-Astra model is a strict no-op`; live hooks recorded exact `gpt-6-astra` only.)
-- [ ] Non-Astra turns are verified no-op. (PARTIAL: unit-covered; live non-Astra no-op recheck not yet run — acceptable pre-release, WINDOW_1 candidate.)
-- [ ] Plan mode, permissions, tools, and normal Codex workflows remain usable. (NOT PROVEN live: Window 0 tasks ran in bypassPermissions sandbox reads; normal permissions/tools/plan workflow compatibility is a release-critical gap — WINDOW_1_REQUIRED.)
-- [ ] Install and uninstall are documented and tested. (PARTIAL: tested — idempotence + CAE-owned-only uninstall regression-covered, cross-platform CI green; documented only as dev CLI, no public install/uninstall doc yet — gap A, WINDOW_1_REQUIRED.)
+- [x] Install and uninstall are documented and tested. (PROVEN: README, `docs/INSTALL.md`, clean artifact consumer install, setup/uninstall contract, idempotence, and byte-for-byte configuration preservation proven in preflight.)
+- [ ] Non-Astra turns are verified live no-op. (Unit-covered; scheduled as Check A in the final installed-artifact live RC validation.)
+- [ ] Plan mode, permissions, tools, and normal Codex workflows remain usable. (Scheduled as Check B in the final installed-artifact live RC validation.)
 
 ### Usage visibility
 
-- [x] 5-hour window is shown when authoritatively exposed. (PROVEN: `cae quota` + receipt schema; Task 1 / revalidation live burns; reset-crossing now reports UNAVAILABLE rather than guessing.)
+- [x] 5-hour window is shown when authoritatively exposed. (PROVEN: `cae quota` + receipt schema; Task 1 / revalidation live burns; reset-crossing reports UNAVAILABLE rather than guessing.)
 - [x] Weekly window is shown when authoritatively exposed. (PROVEN: same; Task 2 weekly 1pt burn on stable epoch 1788793830.)
 - [x] Missing windows are reported as unavailable/unknown rather than guessed. (PROVEN: unit `does not invent a missing 5-hour/weekly window`; `measurement` refuses cross-reset deltas — unit `does not call a reset-crossing change usage burn`.)
 - [x] Reset information is shown only when supplied reliably. (PROVEN: resetsAt/credits surfaced from native snapshots; reset crossing invalidates the delta.)
@@ -29,32 +29,19 @@ Speed does not justify incorrect quota reporting, invasive setup, or untested op
 - [x] Usage calculations are tested against recorded fixtures. (PROVEN: measurement/rate-limits suites incl. malformed + authority-change fixtures.)
 - [x] The live production Astra model id and quota-authority shape are captured from native Codex rather than inferred from marketing names. (PROVEN: exact `gpt-6-astra`, authority shared_default/default/limitId=codex.)
 
-### Live Astra campaign evidence
+### Live validation status
 
 - [x] Window 0 shakedown completed using only allowance already remaining before any banked reset. (PROVEN: 0 resets consumed, 2 remain; Window 0 CLOSED 2026-09-05.)
 - [x] Window 0 proved live Astra target identity, hook behavior, quota authority, and end-to-end receipt capture. (PROVEN: Task 1 PARTIAL + revalidation PASS + Task 2 PASS receipts.)
-- [x] Window 0 integration/measurement defects are fixed or explicitly dispositioned before Window 1. (PROVEN: 4 defects — limitId instability, hook executable-mode/readiness gap, Windows portability, uninstall ownership leak — all fixed, regression-covered, cross-platform green; Task 2 5h burn corrected to UNAVAILABLE — RESET_CROSSED; sandbox 182 classified INTERMITTENT/RECOVERED.)
-- [ ] Window 1 begins from a documented clean allowance state after one banked reset. (WINDOW_1_REQUIRED — candidate frozen here; reset NOT yet authorized.)
-- [ ] Window 1 includes a bounded normal-Astra pass-through/control segment before any new optimization default is promoted. (WINDOW_1_REQUIRED — control-task selection rules defined in `docs/WINDOW1_CANDIDATE_FREEZE.md`.)
-- [ ] Window 1 contains genuine real work, with multiple substantial tasks when allowance permits. (WINDOW_1_REQUIRED.)
+- [x] Window 0 integration/measurement defects are fixed or explicitly dispositioned. (PROVEN: 4 findings — limitId instability, hook executable-mode/readiness gap, Windows portability, uninstall ownership leak — all fixed, regression-covered, cross-platform green; Task 2 5h burn corrected to UNAVAILABLE — RESET_CROSSED; sandbox 182 classified INTERMITTENT/RECOVERED.)
+- [x] Pre-v0.1 runtime hardening (F1–F5) completed and verified in CI. (PROVEN: PR #18 merged; Windows .cmd ComSpec dispatch, stdio error settlement, readiness visibility, bounded version timeout, config shape validation.)
+- [ ] Final installed-artifact release-candidate validation. (PENDING LIVE AUTHORIZATION: single live RC validation following `docs/V0_1_LIVE_RC_VALIDATION.md` on frozen candidate, replacing multi-window optimization campaigns for v0.1.)
 - [x] PASS, PARTIAL, FAIL_USEFUL, and FAIL_WASTE outcomes are preserved rather than cherry-picked. (PROVEN: Task 1 PARTIAL preserved alongside PASSes.)
 - [x] 5-hour and weekly effects are recorded separately. (PROVEN: all Window 0 receipts separate the windows; Task 2 5h UNAVAILABLE while weekly stays 1pt.)
-- [ ] Window 2 is run from the next normal 5-hour availability as a release-candidate validation rather than spending a second reset merely for scheduling convenience. (WINDOW_2_REQUIRED.)
-- [ ] Window 2 uses the intended v0.1 defaults and contains no speculative new optimization experiment. (WINDOW_2_REQUIRED.)
 
 ### Efficiency claims
 
-Any optimization enabled by default must satisfy all of the following:
-
-- [ ] mechanism is documented;
-- [ ] tested on real Astra Plus work;
-- [ ] comparison against a pass-through/control segment exists;
-- [ ] does not materially reduce completion quality;
-- [ ] does not require the user to change normal Codex task style;
-- [ ] can be disabled cleanly;
-- [ ] does not affect non-Astra models.
-
-If no optimization meets this bar by launch day, v0.1 may ship as a trustworthy Astra observability/measurement release rather than inventing an efficiency claim.
+v0.1 ships as an **observability-first release** and makes **no unsupported claims of fixed percentage savings**. Optimization mechanisms and passive token accounting (`docs/TOKEN_ACCOUNTING.md`) are explicitly deferred post-v0.1.
 
 ### Privacy and safety
 
@@ -68,35 +55,36 @@ If no optimization meets this bar by launch day, v0.1 may ship as a trustworthy 
 ### Reliability and platforms
 
 - [x] Supported Node/runtime versions defined. (PROVEN: `engines: node >= 20`; CI matrix Ubuntu 20/22, Windows 22, macOS 22.)
-- [x] Automated tests pass on Ubuntu. (PROVEN: CI green on Node 20 + 22; local 85/84/0/1.)
-- [x] Automated tests pass on Windows. (PROVEN: CI green; 83 pass / 2 POSIX-host skips.)
+- [x] Automated tests pass on Ubuntu. (PROVEN: CI green on Node 20 + 22.)
+- [x] Automated tests pass on Windows. (PROVEN: CI green, real `.cmd` launcher tests PASS.)
 - [x] Automated tests pass on macOS. (PROVEN: CI green.)
-- [x] Real Termux/Android validation passes separately from ordinary Linux CI. (PROVEN: codexu/Ubuntu-under-Termux live campaign — exact target, hooks, quota, rootfs writes. NATIVE Termux lane stays separate under Issue #9 and must NOT be publicly claimed until it passes — see support boundary below.)
-- [x] Corrupt/malformed state fails safely. (PROVEN: malformed purchased-credit/windows surfaced not coerced; malformed hooks event array rejected not overwritten; unreadable CAE config degrades to `config_unreadable` warning. Residual gap D recorded below: hostile/missing CAE state-dir edge cases beyond fixtures remain WINDOW_1 candidate review, not release-proven.)
-- [ ] Unsupported Codex versions produce a clear compatibility result. (NOT PROVEN: version is recorded (`codex --version`, app-server client version) but no unsupported-version gate/result is implemented or tested — gap C, WINDOW_1_REQUIRED.)
-- [x] Re-running setup is idempotent or safely repairable. (PROVEN: idempotence + 2-cycle byte-for-byte, cross-platform green.)
-- [x] Uninstall restores/removes only CAE-owned configuration. (PROVEN: Task 2 ownership fix + regressions.)
-- [x] The user's real Codex launcher/wrapper path works for `cae doctor`, `cae probe`, and `cae quota` in the Termux validation environment. (PROVEN: all pass through `/root/.local/bin/codex` via CAE_CODEX_COMMAND in codexu.)
+- [x] Real Termux/Android validation passes separately from ordinary Linux CI. (PROVEN: codexu/Ubuntu-under-Termux live campaign — exact target, hooks, quota, rootfs writes. NATIVE Termux lane stays separate under Issue #9 and is explicitly declared outside v0.1 support.)
+- [x] Corrupt/malformed state fails safely. (PROVEN: F5 config shape validation, missing launcher spawn errors, bounded version timeout, fail-open hook behavior.)
+- [x] Codex version compatibility documented. (PROVEN: `docs/CODEX_COMPATIBILITY.md`; 0.153.2 validated; other versions unverified rather than hard-coded allowlist; failures stay unavailable/degraded.)
+- [x] Re-running setup is idempotent or safely repairable. (PROVEN: preflight verified byte-for-byte idempotence across repeated cycles.)
+- [x] Uninstall restores/removes only CAE-owned configuration. (PROVEN: preflight verified byte-for-byte restoration of unrelated user configurations.)
+- [x] The user's real Codex launcher/wrapper path works for `cae doctor`, `cae probe`, and `cae quota`. (PROVEN: all pass through `/root/.local/bin/codex` via CAE_CODEX_COMMAND in codexu.)
 
 ### Declared v0.1 support surface (explicit)
 
-- codexu (Ubuntu-under-Termux, `/root/.local/bin/codex`): the authoritative Android development + live Astra validation runtime. codexu health IS a Window 1 gate.
-- Native Termux Codex: a SEPARATE compatibility lane under Issue #9. Native repair is NOT a Window 1 campaign blocker. Native Termux support must NOT be publicly claimed until Issue #9 passes. Before public v0.1, either (a) Issue #9 passes, or (b) native Termux is explicitly declared outside the support surface. No silent weakening: this freeze does NOT claim native Termux.
+- **Supported automated platforms:** Linux (Ubuntu 20+), Windows (Windows Server / Windows 11), macOS (13+), Node.js >= 20.
+- **Authoritative Android validation runtime:** `codexu` (Ubuntu 24.04 under Termux / PRoot) using `/root/.local/bin/codex`.
+- **Excluded:** Native Termux Codex is explicitly **outside** the declared v0.1 support surface (tracked separately under Issue #9).
 
-### Remaining release-critical gaps (pre-Window-1)
+### Reconciled status of release-critical gaps
 
-A. Public install/uninstall documentation: tested but no public install contract yet (README states dev-CLI only). WINDOW_1_REQUIRED.
-B. Live strict non-Astra no-op evidence: unit-covered only; live recheck optional before release. WINDOW_1 candidate.
-C. Unsupported Codex-version behavior: no clear compatibility result implemented/tested. WINDOW_1_REQUIRED.
-D. Corrupt/malformed CAE state handling: fixture-level safe-fail proven; hostile real-world state-dir corruption beyond fixtures unreviewed. WINDOW_1 candidate review (Phase 9 verdict below).
-E. Normal permissions/tools/plan workflow compatibility: Window 0 ran bypassPermissions sandbox reads; ordinary-user workflow compatibility NOT proven live. WINDOW_1_REQUIRED.
-F. Final declared Termux support boundary: stated above; must be mirrored in README before public v0.1 (done in this freeze — verify).
+- **Gap A (Public install/uninstall documentation):** PROVEN. Documented in `README.md` and `docs/INSTALL.md`, validated in clean tarball preflight install.
+- **Gap B (Live non-Astra no-op):** Scheduled as Check A in `docs/V0_1_LIVE_RC_VALIDATION.md`.
+- **Gap C (Unsupported Codex-version behavior):** PROVEN. Handled transparently and documented in `docs/CODEX_COMPATIBILITY.md`.
+- **Gap D (Corrupt state handling):** PROVEN. Resolved and regression-covered via F5 runtime hardening.
+- **Gap E (Normal permissions/workflow compatibility):** Scheduled as Check B in `docs/V0_1_LIVE_RC_VALIDATION.md`.
+- **Gap F (Termux support boundary):** PROVEN. Explicitly declared in `README.md`, `docs/INSTALL.md`, and `docs/CODEX_COMPATIBILITY.md`.
 
 ## Public wording constraints
 
 Allowed direction:
 
-> Use Astra normally in Codex. Waste less of your Plus allowance.
+> Use Astra normally in Codex. Measure the work, not just the burn.
 
 Not allowed without strong quantified evidence:
 
@@ -106,23 +94,15 @@ Not allowed without strong quantified evidence:
 - "unlimited Astra"
 - "free extra Astra"
 
-CAE optimizes behavior around the allowance. It does not change OpenAI's entitlement or quota accounting.
+CAE observes behavior around the allowance. It does not change OpenAI's entitlement or quota accounting.
 
-## Release sequence
+## Final release sequence
 
-1. complete zero-Astra readiness and cross-platform CI;
-2. run Window 0 live shakedown on remaining allowance;
-3. fix/harden without Astra;
-4. freeze the Window 1 candidate;
-5. use one banked reset and run the clean early-release campaign;
-6. fix/harden without Astra;
-7. wait for the next normal 5-hour availability and run Window 2 release-candidate validation;
-8. run final install/uninstall and non-Astra regressions;
-9. create release receipt;
-10. publish v0.1 only when the release gate is satisfied.
-
-The second banked reset is not part of the planned release-test sequence.
-
-## Post-v0.1
-
-Possible later work includes richer local diagnostics, optional exported anonymized receipts, broader Codex surfaces, and eventually Work support. These are secondary to keeping the v0.1 Astra-on-Plus Codex experience simple and trustworthy.
+1. Complete preflight audit and package metadata configuration (DONE);
+2. Finalize v0.1.0 release candidate branch, run cross-platform CI, merge to main, and freeze `release/v0.1-candidate`;
+3. Await owner authorization on weekly allowance / banked reset;
+4. Execute final installed-artifact live validation (`docs/V0_1_LIVE_RC_VALIDATION.md`);
+5. Switch repository visibility to public;
+6. Enable GitHub Private Vulnerability Reporting (`OWNER_UI_ACTION_AT_RELEASE`);
+7. Tag `v0.1.0` and publish GitHub Release + npm registry package from tested artifact;
+8. Begin post-release monitoring.

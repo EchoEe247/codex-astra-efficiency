@@ -76,7 +76,7 @@ test("builds the current Codex initialize handshake without a jsonrpc field", ()
       clientInfo: {
         name: "codex-astra-efficiency",
         title: "Codex Astra Efficiency",
-        version: "0.0.0-dev"
+        version: "0.1.0"
       },
       capabilities: null
     }
@@ -407,6 +407,43 @@ test(
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-win-test-"));
     try {
       const shimPath = path.join(tmpDir, "codex-test.cmd");
+      const script = [
+        "@echo off",
+        'if "%1"=="--version" (',
+        "  echo codex 1.2.3",
+        "  exit /b 0",
+        ")",
+        'if "%1"=="app-server" (',
+        '  echo {"id":1,"result":{"clientInfo":{"name":"test"}}}',
+        '  echo {"id":2,"result":{"rateLimits":{"planType":"plus"}}}',
+        "  exit /b 0",
+        ")",
+        "exit /b 1"
+      ].join("\r\n");
+      fs.writeFileSync(shimPath, script);
+
+      const version = probeCodexVersion(shimPath);
+      assert.equal(version.status, "ok");
+      assert.match(version.version, /codex 1\.2\.3/);
+
+      const limits = await readAccountRateLimits({ codexCommand: shimPath });
+      assert.equal(limits.initialized, true);
+      assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+);
+
+test(
+  "end-to-end real Windows .cmd shim with spaces in directory path launches app-server and answers readAccountRateLimits",
+  { skip: process.platform !== "win32" },
+  async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-win-test-"));
+    try {
+      const spaceDir = path.join(tmpDir, "CAE Windows Test");
+      fs.mkdirSync(spaceDir, { recursive: true });
+      const shimPath = path.join(spaceDir, "codex.cmd");
       const script = [
         "@echo off",
         'if "%1"=="--version" (',

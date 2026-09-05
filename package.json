@@ -13,7 +13,8 @@
     "CHANGELOG.md",
     "SECURITY.md",
     "LICENSE",
-    "docs/INSTALL.md"
+    "docs/INSTALL.md",
+    "docs/CODEX_COMPATIBILITY.md"
   ],
   "scripts": {
     "test": "node --test",
