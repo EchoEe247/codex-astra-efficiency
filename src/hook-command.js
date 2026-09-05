@@ -28,14 +28,26 @@ function pathDelimiter(platform) {
   return platform === "win32" ? ";" : ":";
 }
 
-function winExtensions(env) {
+function winExtensionsFor(env) {
   const raw =
     (env && typeof env.PATHEXT === "string" && env.PATHEXT) ||
-    ".COM;.EXE;.BAT;.CMD";
+    ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC";
   return raw
     .split(";")
     .map((ext) => ext.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function pathImplFor(platform) {
+  return platform === "win32" ? path.win32 : path.posix;
+}
+
+function hasPathSeparator(binary, platform, pathImpl) {
+  if (!binary) return false;
+  if (platform === "win32") {
+    return /[\\/]/.test(binary) || pathImpl.isAbsolute(binary);
+  }
+  return binary.includes("/");
 }
 
 function isAccessible(file, platform, fsImpl) {
@@ -60,40 +72,58 @@ function existsAnywhere(file, fsImpl) {
   }
 }
 
+function isCmdShim(resolvedPath, platform) {
+  if (platform !== "win32" || typeof resolvedPath !== "string") return false;
+  const lower = resolvedPath.toLowerCase();
+  return lower.endsWith(".cmd") || lower.endsWith(".bat");
+}
+
 /**
  * Locate the hook binary without executing anything. Returns one of:
  * - { outcome: "found", path }
  * - { outcome: "missing" }
  * - { outcome: "not_executable", path }
+ *
+ * The path implementation, environment (PATHEXT), and filesystem are all
+ * injectable so callers can simulate Windows or POSIX behavior on any host
+ * without leaking the host's path grammar into the result.
  */
 export function findHookBinary(
   binary,
-  { pathEnv = process.env.PATH ?? "", platform = process.platform, fsImpl = fs } = {}
+  {
+    pathEnv = process.env.PATH ?? "",
+    platform = process.platform,
+    env = process.env,
+    fsImpl = fs,
+    pathImpl
+  } = {}
 ) {
   if (!binary) return { outcome: "missing", path: null };
 
-  const hasSeparator = binary.includes("/") || binary.includes("\\");
+  const usePathImpl = pathImpl ?? pathImplFor(platform);
+  const delimiter = pathDelimiter(platform);
+  const hasSeparator = hasPathSeparator(binary, platform, usePathImpl);
   const candidates = [];
   if (hasSeparator) {
     candidates.push(binary);
   } else {
-    const dirs = String(pathEnv).split(pathDelimiter(platform));
+    const dirs = String(pathEnv).split(delimiter);
     for (const dir of dirs) {
       if (!dir) continue;
       if (platform === "win32") {
         const lower = binary.toLowerCase();
-        const hasExt = winExtensions(process.env).some((ext) =>
+        const hasExt = winExtensionsFor(env).some((ext) =>
           lower.endsWith(ext)
         );
         if (hasExt) {
-          candidates.push(path.join(dir, binary));
+          candidates.push(usePathImpl.join(dir, binary));
         } else {
-          for (const ext of winExtensions(process.env)) {
-            candidates.push(path.join(dir, `${binary}${ext}`));
+          for (const ext of winExtensionsFor(env)) {
+            candidates.push(usePathImpl.join(dir, `${binary}${ext}`));
           }
         }
       } else {
-        candidates.push(path.join(dir, binary));
+        candidates.push(usePathImpl.join(dir, binary));
       }
     }
   }
@@ -126,11 +156,65 @@ function mapSpawnError(error) {
  * Run a harmless identity probe (`--help`) against the resolved hook binary.
  * This never fires a hook event and never touches Codex state; unknown CAE
  * commands fall through to usage output with exit code 0.
+ *
+ * Windows `.cmd` / `.bat` shims (npm-installed CLI shims, etc.) cannot be
+ * launched directly through `spawnSync` because Node does not interpret them
+ * as native binaries. For those we invoke `%ComSpec% /c <shim> --help` so
+ * the shell performs the actual script dispatch, with quoting robust against
+ * spaces in the resolved path. Direct execution is preserved for `.exe`,
+ * `.com`, native binaries, and POSIX executables.
  */
 export function probeHookBinary(
   resolvedPath,
-  { spawnSyncImpl = spawnSync, timeoutMs = 5000 } = {}
+  {
+    spawnSyncImpl = spawnSync,
+    timeoutMs = 5000,
+    platform = process.platform,
+    env = process.env
+  } = {}
 ) {
+  if (!resolvedPath) {
+    return {
+      launched: false,
+      callable: false,
+      reason: "hook_command_missing"
+    };
+  }
+
+  if (isCmdShim(resolvedPath, platform)) {
+    const comspec = env?.ComSpec || env?.COMSPEC || "cmd.exe";
+    let result;
+    try {
+      result = spawnSyncImpl(comspec, ["/d", "/s", "/c", resolvedPath, "--help"], {
+        encoding: "utf8",
+        timeout: timeoutMs,
+        windowsHide: true
+      });
+    } catch (error) {
+      return { launched: true, callable: false, reason: mapSpawnError(error) };
+    }
+    if (result?.error) {
+      return { launched: true, callable: false, reason: mapSpawnError(result.error) };
+    }
+    if (typeof result?.status === "number" && result.status === 0) {
+      return { launched: true, callable: true, reason: null };
+    }
+    if (result?.signal) {
+      return {
+        launched: true,
+        callable: false,
+        reason: "hook_command_probe_timeout",
+        signal: result.signal
+      };
+    }
+    return {
+      launched: true,
+      callable: false,
+      reason: "hook_command_probe_failed",
+      exitCode: result?.status ?? null
+    };
+  }
+
   let result;
   try {
     result = spawnSyncImpl(resolvedPath, ["--help"], {
@@ -171,6 +255,7 @@ export function checkHookCommand({
   command = CAE_HOOK_COMMAND,
   pathEnv = process.env.PATH ?? "",
   platform = process.platform,
+  env = process.env,
   fsImpl = fs,
   spawnSyncImpl = spawnSync,
   timeoutMs = 5000
@@ -186,7 +271,7 @@ export function checkHookCommand({
     };
   }
 
-  const located = findHookBinary(binary, { pathEnv, platform, fsImpl });
+  const located = findHookBinary(binary, { pathEnv, platform, env, fsImpl });
   if (located.outcome === "missing") {
     return {
       command,
@@ -206,7 +291,12 @@ export function checkHookCommand({
     };
   }
 
-  const probe = probeHookBinary(located.path, { spawnSyncImpl, timeoutMs });
+  const probe = probeHookBinary(located.path, {
+    spawnSyncImpl,
+    timeoutMs,
+    platform,
+    env
+  });
   if (!probe.callable) {
     return {
       command,
