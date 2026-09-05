@@ -1,0 +1,35 @@
+name: Feature request
+description: Propose a focused CAE capability or usability improvement
+title: "[Feature] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CAE prioritizes native Codex workflow, privacy, trustworthy measurements, and evidence-backed efficiency behavior.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the real user problem before proposing implementation details.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or examples
+      description: If this concerns Astra usage, include sanitized numeric observations rather than private prompts/transcripts.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: CAE constraints
+      options:
+        - label: This proposal can preserve native Codex `/model` selection.
+        - label: This proposal can preserve strict non-Astra no-op behavior.
+        - label: This proposal does not require collecting raw prompts/source/transcripts or credentials.
