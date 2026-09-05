@@ -11,6 +11,7 @@ import { loadConfig, parseModelIds, writeConfig } from "../src/config.js";
 import { runHook } from "../src/hook.js";
 import { summarizeAstraDiscovery } from "../src/model-discovery.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
+import { summarizeAstraReadiness } from "../src/readiness.js";
 import { applyHookSetup, planHookSetup } from "../src/setup.js";
 
 async function readStdin() {
@@ -95,6 +96,47 @@ async function integrationProbe() {
   };
 }
 
+async function readinessProbe() {
+  const codexCommand = resolveCodexCommand();
+  const config = loadConfig();
+  const [quotaResult, modelResult] = await Promise.allSettled([
+    readAccountRateLimits({ codexCommand }),
+    readModelList({ codexCommand })
+  ]);
+
+  const failures = {};
+  if (quotaResult.status !== "fulfilled") {
+    failures.quota = quotaResult.reason?.message ?? String(quotaResult.reason);
+  }
+  if (modelResult.status !== "fulfilled") {
+    failures.modelCatalog = modelResult.reason?.message ?? String(modelResult.reason);
+  }
+
+  if (Object.keys(failures).length > 0) {
+    return {
+      status: "native_read_unavailable",
+      codexCommand,
+      codex: codexVersion(codexCommand),
+      nativeHooks: hookReadiness(),
+      configReadable: config.warning === null,
+      failures,
+      meaning: "do_not_spend_astra_until_zero_inference_reads_are_understood"
+    };
+  }
+
+  return {
+    codexCommand,
+    codex: codexVersion(codexCommand),
+    nativeHooks: hookReadiness(),
+    configReadable: config.warning === null,
+    ...summarizeAstraReadiness({
+      modelPayload: modelResult.value.result,
+      rateLimitPayload: quotaResult.value.result,
+      configuredModelIds: config.astraModelIds
+    })
+  };
+}
+
 function targetCommand(args) {
   const action = args[0] ?? "show";
   if (action === "show") {
@@ -168,6 +210,13 @@ async function main() {
 
   if (command === "probe") {
     process.stdout.write(`${JSON.stringify(await integrationProbe(), null, 2)}\n`);
+    return;
+  }
+
+  if (command === "readiness") {
+    const result = await readinessProbe();
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (result.status === "native_read_unavailable") process.exitCode = 1;
     return;
   }
 
@@ -245,7 +294,7 @@ async function main() {
   }
 
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae target show|set <exact-model-id>|clear  # validation/compatibility control\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n\nLauncher override:\n  CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae probe\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae readiness  # zero-inference Astra candidate/target/quota readiness summary\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae target show|set <exact-model-id>|clear  # validation/compatibility control\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n\nLauncher override:\n  CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness\n"
   );
 }
 

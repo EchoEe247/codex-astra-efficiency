@@ -6,7 +6,7 @@ The first public release should solve one narrow problem well:
 
 > A ChatGPT Plus user can keep using Codex normally, select Astra normally, and gain trustworthy Astra-specific usage visibility plus only those efficiency behaviors that have been validated on real Plus work.
 
-The release should arrive quickly after Astra reaches Plus, but speed does not justify incorrect quota reporting, invasive setup, or untested optimization claims.
+Speed does not justify incorrect quota reporting, invasive setup, or untested optimization claims.
 
 ## Required before public v0.1
 
@@ -27,14 +27,20 @@ The release should arrive quickly after Astra reaches Plus, but speed does not j
 - [ ] Reset information is shown only when supplied reliably.
 - [ ] Receipts include Codex version and enough provenance to interpret the measurement.
 - [ ] Usage calculations are tested against recorded fixtures.
+- [ ] The live production Astra model id and quota-authority shape are captured from native Codex rather than inferred from marketing names.
 
-### Astra baseline evidence
+### Live Astra campaign evidence
 
-- [ ] At least one full real-work Astra Plus campaign is captured.
-- [ ] Multiple substantial tasks are represented unless the allowance itself prevents that.
-- [ ] PASS, PARTIAL, and failure outcomes are preserved rather than cherry-picked.
-- [ ] Baseline sessions use normal Astra behavior before optimization.
+- [ ] Window 0 shakedown completed using only allowance already remaining before any banked reset.
+- [ ] Window 0 proved live Astra target identity, hook behavior, quota authority, and end-to-end receipt capture.
+- [ ] Window 0 integration/measurement defects are fixed or explicitly dispositioned before Window 1.
+- [ ] Window 1 begins from a documented clean allowance state after one banked reset.
+- [ ] Window 1 includes a bounded normal-Astra pass-through/control segment before any new optimization default is promoted.
+- [ ] Window 1 contains genuine real work, with multiple substantial tasks when allowance permits.
+- [ ] PASS, PARTIAL, FAIL_USEFUL, and FAIL_WASTE outcomes are preserved rather than cherry-picked.
 - [ ] 5-hour and weekly effects are recorded separately.
+- [ ] Window 2 is run from the next normal 5-hour availability as a release-candidate validation rather than spending a second reset merely for scheduling convenience.
+- [ ] Window 2 uses the intended v0.1 defaults and contains no speculative new optimization experiment.
 
 ### Efficiency claims
 
@@ -42,7 +48,7 @@ Any optimization enabled by default must satisfy all of the following:
 
 - [ ] mechanism is documented;
 - [ ] tested on real Astra Plus work;
-- [ ] comparison against baseline exists;
+- [ ] comparison against a pass-through/control segment exists;
 - [ ] does not materially reduce completion quality;
 - [ ] does not require the user to change normal Codex task style;
 - [ ] can be disabled cleanly;
@@ -59,14 +65,18 @@ If no optimization meets this bar by launch day, v0.1 may ship as a trustworthy 
 - [ ] No quota bypass/reset/circumvention behavior.
 - [ ] No automatic termination of productive active Astra turns based solely on quota thresholds.
 
-### Reliability
+### Reliability and platforms
 
 - [ ] Supported Node/runtime versions defined.
-- [ ] Automated tests pass.
+- [ ] Automated tests pass on Ubuntu.
+- [ ] Automated tests pass on Windows.
+- [ ] Automated tests pass on macOS.
+- [ ] Real Termux/Android validation passes separately from ordinary Linux CI.
 - [ ] Corrupt/malformed state fails safely.
 - [ ] Unsupported Codex versions produce a clear compatibility result.
 - [ ] Re-running setup is idempotent or safely repairable.
 - [ ] Uninstall restores/removes only CAE-owned configuration.
+- [ ] The user's real Codex launcher/wrapper path works for `cae doctor`, `cae probe`, and `cae quota` in the Termux validation environment.
 
 ## Public wording constraints
 
@@ -84,18 +94,20 @@ Not allowed without strong quantified evidence:
 
 CAE optimizes behavior around the allowance. It does not change OpenAI's entitlement or quota accounting.
 
-## Fast-release sequence
+## Release sequence
 
-When Astra becomes available on the test Plus account:
+1. complete zero-Astra readiness and cross-platform CI;
+2. run Window 0 live shakedown on remaining allowance;
+3. fix/harden without Astra;
+4. freeze the Window 1 candidate;
+5. use one banked reset and run the clean early-release campaign;
+6. fix/harden without Astra;
+7. wait for the next normal 5-hour availability and run Window 2 release-candidate validation;
+8. run final install/uninstall and non-Astra regressions;
+9. create release receipt;
+10. publish v0.1 only when the release gate is satisfied.
 
-1. verify current Codex/Astra model identity and integration compatibility;
-2. run observe-only real work;
-3. review allowance burn and failure modes;
-4. test the highest-confidence efficiency hypotheses;
-5. promote only validated changes;
-6. run install/uninstall and non-Astra regression checks;
-7. create release receipt;
-8. publish v0.1 as soon as the release gate is satisfied.
+The second banked reset is not part of the planned release-test sequence.
 
 ## Post-v0.1
 
