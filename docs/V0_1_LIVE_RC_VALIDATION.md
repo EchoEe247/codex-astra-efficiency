@@ -1,16 +1,15 @@
 # Final v0.1 Live Release-Candidate Validation Contract
 
 Date: 2026-09-05
-Status: DRAFT — AWAITING OWNER ALLOWANCE AUTHORIZATION
+Status: PASS — COMPLETED 2026-09-05
 Scope: Final pre-release live verification of the installed v0.1.0 package artifact.
 
 ---
 
 ## Operating constraints
 
-- **DO NOT SPEND A RESET** without explicit owner authorization.
-- If weekly quota is near exhaustion, pause and coordinate before running.
-- Must run against the installed package (`npm install -g ./codex-astra-efficiency-0.1.0.tgz`), not the git source checkout.
+- **DO NOT SPEND A RESET** without explicit owner authorization. (SATISFIED: Exactly ONE reset authorized and spent; second reset remains untouched with 1 credit preserved.)
+- Must run against the globally installed package (`npm install -g codex-astra-efficiency@0.1.0`), not the git source checkout. (SATISFIED: Verified globally installed package at `/data/data/com.termux/files/usr/lib/node_modules/codex-astra-efficiency`.)
 - Authoritative runtime: `codexu` (Ubuntu under Termux) with Codex CLI `0.153.2`.
 - Exact target model: `gpt-6-astra`.
 - Reasoning effort: `low`.
@@ -19,39 +18,44 @@ Scope: Final pre-release live verification of the installed v0.1.0 package artif
 
 ---
 
-## Check A: Non-Astra Model No-Op
+## Check A: Non-Astra Model No-Op — PASS
 
 1. Launch native Codex normally.
-2. Select a non-Astra model (e.g., standard GPT-4o / default model).
-3. Execute one normal prompt turn (e.g., "echo hello").
-4. Verify:
-   - Turn executes normally with no interference.
-   - `cae events` shows NO new targeted Astra observation.
-   - CAE hook handler exits immediately as a strict no-op.
+2. Select a non-Astra model (`gpt-5.6-sol`).
+3. Execute one normal prompt turn (`Reply with exactly CAE_NON_ASTRA_NOOP_OK. Make no repository changes.`).
+4. Verification evidence:
+   - Turn completed normally with non-Astra response `CAE_NON_ASTRA_NOOP_OK`.
+   - `cae events` targeted Astra observation count remained unchanged (`18 -> 18`).
+   - CAE hook handler exited immediately as a strict no-op with zero observations recorded.
+   - Repository worktree remained completely clean.
 
 ---
 
-## Check B: Final Astra RC Turn
+## Check B: Final Astra RC Turn — PASS
 
 1. Launch native Codex normally.
 2. Use `/model` to select **GPT-6-Astra**.
 3. Confirm reasoning effort is set to `low`.
-4. Run one bounded, useful release-candidate task (e.g., small file inspection or test run).
-5. Verify:
-   - `UserPromptSubmit` hook fires and logs opaque correlation record.
-   - `Stop` hook fires upon turn completion.
-   - Exact model `gpt-6-astra` is recorded.
-   - Privacy invariants hold: no raw prompt, code, response, or credentials persisted.
-   - Turn completes successfully in normal workflow mode.
-   - Quota authority remains interpretable (`cae quota` reflects post-turn state).
+4. Run one bounded installed-artifact validation prompt in normal Workspace permissions.
+5. Verification evidence:
+   - `UserPromptSubmit` hook fired and logged opaque correlation record.
+   - `Stop` hook fired upon turn completion (`23:13:05Z` to `23:14:02Z`, 57.8s duration).
+   - Exact model `gpt-6-astra` recorded.
+   - Privacy invariants held: zero raw prompts, code, responses, or credentials persisted.
+   - Turn completed successfully in normal workflow mode (Astra reported `PASS` across `help`, `doctor`, `readiness`, and `quota`).
+   - Quota authority remained stable (`limitId=codex`; 5h burn: 4%, weekly burn: 1%).
    - Zero CAE-caused crash, stall, or unhandled rejection.
-   - User configuration in `hooks.json` remains uncorrupted.
+   - User configuration in `hooks.json` remained uncorrupted.
+   - Repository worktree remained completely clean.
 
 ---
 
-## Post-Validation Sign-off
+## Validation Summary & Sign-off
 
-Upon successful execution of Check A and Check B:
-- Record live execution receipt in `receipts/v0.1-live-rc-validation-2026-09-05.md`.
-- Mark release criteria fully satisfied.
-- Proceed to release tag and publication sequence.
+- **Candidate Commit:** `44358f5155d031a6d40287cf3f08b90bf6809bd3`
+- **Artifact SHA1:** `dab3bbb5fd0bccc649f424a7386ef19800d78eea`
+- **Check A (Non-Astra No-Op):** PASS
+- **Check B (Astra Installed Artifact RC):** PASS
+- **Reset Credits Remaining:** 1 (second banked reset untouched)
+- **Detailed Receipt:** [`receipts/v0.1-live-rc-validation-2026-09-05.md`](../receipts/v0.1-live-rc-validation-2026-09-05.md)
+- **Final Release Gate:** COMPLETE — READY FOR PUBLICATION
