@@ -4,12 +4,26 @@ import path from "node:path";
 import { normalizeCompletionEvidence, normalizeRunDescriptor } from "./measurement.js";
 import { calculateModelUsageDelta, normalizeRateLimitResponse } from "./rate-limits.js";
 
-export const RECEIPT_SCHEMA_VERSION = 2;
+export const RECEIPT_SCHEMA_VERSION = 3;
 export const RECEIPT_OUTCOMES = Object.freeze([
   "PASS",
   "PARTIAL",
   "FAIL_USEFUL",
   "FAIL_WASTE",
+  "UNKNOWN"
+]);
+export const RECEIPT_CAMPAIGNS = Object.freeze([
+  "unspecified",
+  "window_0",
+  "window_1_control",
+  "window_1_optimized",
+  "window_2_rc"
+]);
+export const RECEIPT_CAUSE_CLASSES = Object.freeze([
+  "MODEL",
+  "USER_TASK",
+  "CAE",
+  "MIXED",
   "UNKNOWN"
 ]);
 
@@ -32,6 +46,13 @@ function unavailableUsageDelta() {
   };
 }
 
+function requireEnum(value, allowed, field) {
+  if (!allowed.includes(value)) {
+    throw new TypeError(`unsupported ${field}: ${value}`);
+  }
+  return value;
+}
+
 export function startRunReceipt({
   id = crypto.randomUUID(),
   model,
@@ -39,6 +60,7 @@ export function startRunReceipt({
   plan = null,
   reasoningEffort = null,
   serviceTier = null,
+  campaign = "unspecified",
   taskClass = "unclassified",
   projectScale = null,
   continuity = null,
@@ -49,6 +71,8 @@ export function startRunReceipt({
   if (typeof model !== "string" || !model.trim()) {
     throw new TypeError("model is required");
   }
+
+  requireEnum(campaign, RECEIPT_CAMPAIGNS, "campaign");
 
   const startQuota = normalizeQuota(rawQuota);
   const nativePlan = startQuota?.default?.planType ?? null;
@@ -66,6 +90,7 @@ export function startRunReceipt({
     schemaVersion: RECEIPT_SCHEMA_VERSION,
     id,
     status: "running",
+    campaign,
     model: model.trim(),
     codexVersion: typeof codexVersion === "string" ? codexVersion : null,
     ...descriptor,
@@ -73,6 +98,7 @@ export function startRunReceipt({
     endedAt: null,
     durationMs: null,
     outcome: null,
+    causeClass: null,
     requestedObjectiveCompleted: null,
     validationStatus: null,
     humanInterventions: null,
@@ -92,6 +118,7 @@ export function completeRunReceipt(
   {
     rawQuota = null,
     outcome = "UNKNOWN",
+    causeClass = "UNKNOWN",
     requestedObjectiveCompleted = null,
     validationStatus = null,
     humanInterventions = null,
@@ -106,9 +133,8 @@ export function completeRunReceipt(
   if (!receipt || receipt.status !== "running") {
     throw new TypeError("receipt must be a running receipt");
   }
-  if (!RECEIPT_OUTCOMES.includes(outcome)) {
-    throw new TypeError(`unsupported outcome: ${outcome}`);
-  }
+  requireEnum(outcome, RECEIPT_OUTCOMES, "outcome");
+  requireEnum(causeClass, RECEIPT_CAUSE_CLASSES, "cause class");
 
   const evidence = normalizeCompletionEvidence({
     requestedObjectiveCompleted,
@@ -138,6 +164,7 @@ export function completeRunReceipt(
     endedAt: endedAtIso,
     durationMs: endedMs - startedMs,
     outcome,
+    causeClass,
     ...evidence,
     endQuota,
     usageDelta
