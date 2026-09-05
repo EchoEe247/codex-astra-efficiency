@@ -49,16 +49,17 @@ substantive Window 0 evidence:
 
 ### Next phase
 
-PRE-WINDOW-1 HARDENING / CANDIDATE FREEZE.
+PRE-WINDOW-1 HARDENING / CANDIDATE FREEZE — **COMPLETE (2026-09-05)**.
 
-Window 1 must NOT start until:
-- Task 2 PR (#12) merged to main;
-- main green after merge;
-- remaining release-critical non-inference gaps reviewed;
-- candidate frozen;
-- one banked reset explicitly authorized by coordination.
+- PR #13 (pre-window1/candidate-freeze) merged at `7a0c3eb3c1f06e3fad0e1ce2bcac80b15c181802`; CI green on Ubuntu Node 20/22, Windows Node 22, macOS Node 22.
+- Task 2 5h burn corrected to UNAVAILABLE — RESET_CROSSED / NO SAME-WINDOW PRE-TURN BASELINE (weekly 1pt stands).
+- Sandbox 182 classified INTERMITTENT CODEX/RUNTIME TOOL FAILURE — RECOVERED (not release-blocking; rootfs writes validated; 182 not universally eliminated).
+- Release criteria reconciled: 30/46 proven; remaining gaps A (public install/uninstall docs), C (unsupported Codex-version behavior), E (normal permissions/tools/plan workflow) are WINDOW_1_REQUIRED; B (live non-Astra no-op) and D (hostile state edges beyond fixtures) are WINDOW_1 candidates; F (Termux boundary) declared explicitly.
+- Support boundary declared: codexu authoritative (Window 1 gate); native Termux NOT claimed until Issue #9 passes.
+- Window 1 reasoning policy: control starts at `low` (native default; old Issue #5 "Start at Medium" superseded — coordination comment 5551813334).
+- Candidate frozen: `docs/WINDOW1_CANDIDATE_FREEZE.md`; branch `window1/candidate` pinned to the final tested main commit; receipt `receipts/pre-window-1-candidate-freeze-2026-09-05.md`.
 
-Pre-live Task 2 contract (historical, executed): `docs/WINDOW0_TASK2_CONTRACT.md`.
+Window 1 remains gated on: explicit banked-reset authorization by coordination. One banked reset is planned for Window 1; the second stays untouched.
 
 ## Historical: Task 1 blocked status (superseded 2026-09-05)
 
@@ -279,4 +280,4 @@ history only.
 
 ## Release posture
 
-CAE is **live-Astra validated end-to-end** (Window 0 closed 2026-09-05): exact target, real hook capture, rootfs sandboxed writes, and the full setup/uninstall safety audit all pass on the authoritative runtime, with cross-platform CI green. Not yet claimed: any Astra efficiency improvement. Next: pre-Window-1 hardening and candidate freeze; Window 1 waits for a merged, green main and an explicitly authorized banked reset.
+CAE is **live-Astra validated end-to-end** (Window 0 closed 2026-09-05): exact target, real hook capture, rootfs sandboxed writes, and the full setup/uninstall safety audit all pass on the authoritative runtime, with cross-platform CI green. Pre-Window-1 hardening and candidate freeze are COMPLETE (2026-09-05, PR #13 at `7a0c3eb`): measurement interpretations corrected, release criteria reconciled (30/46 proven; gaps A–F explicit), support boundary declared (codexu authoritative; native Termux NOT claimed until Issue #9), and the Window 1 candidate frozen on branch `window1/candidate` (pass-through/observe-only control starting at native-default `low`). Not yet claimed: any Astra efficiency improvement. Window 1 waits ONLY for an explicitly authorized banked reset (one planned; second untouched).

@@ -1,8 +1,19 @@
 # Window 1 Candidate Freeze — 2026-09-05
 
-Pre-Window-1 hardening branch: `pre-window1/candidate-freeze`.
-Candidate SHA: TBD (exact tested main commit after PR merge; recorded here,
-in `trackers/STATE.md`, and in the Issue #5 coordination comment).
+Pre-Window-1 hardening branch: `pre-window1/candidate-freeze` (PR #13).
+
+## Candidate SHA
+
+- Tested merge base: `7a0c3eb3c1f06e3fad0e1ce2bcac80b15c181802` (PR #13 merge;
+  full CI matrix green — Ubuntu Node 20/22, Windows Node 22, macOS Node 22;
+  local suite 85/84/0/1; npm run check PASS; worktree clean on both the
+  Termux-side and rootfs checkouts).
+- Candidate: the FINAL TESTED DOCUMENTATION COMMIT on main that records this
+  freeze (this commit), pinned exactly by branch **`window1/candidate`**.
+  A commit cannot embed its own hash, so the exact candidate SHA is recorded
+  in the Issue #5 coordination comment and equals the `window1/candidate`
+  branch head at all times. No commits may be added to `window1/candidate`
+  afterward.
 
 ## Candidate contract
 
