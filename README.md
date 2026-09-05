@@ -160,11 +160,15 @@ See [`docs/ASTRA_WINDOW_0_SHAKEDOWN.md`](docs/ASTRA_WINDOW_0_SHAKEDOWN.md) and [
 
 ## Current status
 
-**Astra live on the test Plus account; Window 0 preparation in progress.**
+**Window 0 complete (2026-09-05); pre-Window-1 candidate freeze in progress.**
 
-The exact native Astra model id and Astra quota-authority shape still require CAE-native capture. No Astra efficiency improvement is claimed yet.
-
-The repository remains private until the real-work evidence and release gates are satisfied.
+- Exact native model observed: `gpt-6-astra` (native default reasoning `low`).
+- Quota authority observed: `shared_default` / `default` / `limitId=codex` (Codex `0.153.2` via codexu).
+- Window 0: Task 1 PARTIAL (useful), minimal live revalidation PASS, Task 2 PASS (setup/uninstall safety). Real `UserPromptSubmit`/`Stop` hooks proven; privacy proven; setup idempotence and CAE-owned-only uninstall proven and regression-covered; cross-platform CI green (Ubuntu 20/22, Windows 22, macOS 22). Banked resets consumed: 0 (2 remain).
+- Measurement note: Task 2 5h burn is UNAVAILABLE — RESET_CROSSED (no same-window pre-turn baseline); weekly burn 1pt.
+- No Astra efficiency improvement is claimed yet. Window 0 produced integration/correctness fixes only — no validated efficiency intervention.
+- Runtime boundary: codexu (Ubuntu-under-Termux) is the authoritative live-validation runtime. Native Termux Codex is a separate lane (Issue #9) and is NOT claimed.
+- The repository remains private during the Window 1/2 evidence campaign.
 
 ## Authorities
 
