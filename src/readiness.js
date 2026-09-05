@@ -40,7 +40,8 @@ export function summarizeAstraReadiness({
   modelPayload,
   rateLimitPayload,
   configuredModelIds = [],
-  hookCommand = null
+  hookCommand = null,
+  nativeHooks = null
 } = {}) {
   const discovery = summarizeAstraDiscovery(modelPayload);
   const quota = normalizeRateLimitResponse(rateLimitPayload);
@@ -89,6 +90,10 @@ export function summarizeAstraReadiness({
   else if (authority.status !== "selected") status = "quota_authority_unresolved";
   else if (hookCommand && hookCommand.available !== true) {
     status = HOOK_COMMAND_UNAVAILABLE;
+  } else if (nativeHooks && nativeHooks.readable !== true) {
+    status = "native_hooks_unavailable";
+  } else if (nativeHooks && nativeHooks.installed !== true) {
+    status = "native_hooks_not_installed";
   }
 
   const result = {
@@ -105,8 +110,13 @@ export function summarizeAstraReadiness({
           ? "select Astra in native /model and capture live hook identity"
           : status === HOOK_COMMAND_UNAVAILABLE
             ? "repair the CAE hook command installation before live capture"
-            : "resolve quota authority before interpreting Astra usage deltas"
+            : status === "native_hooks_unavailable"
+              ? "repair/read the native Codex hook configuration before live capture"
+              : status === "native_hooks_not_installed"
+                ? "run cae setup and complete native Codex hook review before live capture"
+                : "resolve quota authority before interpreting Astra usage deltas"
   };
   if (hookCommand !== null) result.hookCommand = hookCommand;
+  if (nativeHooks !== null) result.nativeHooks = nativeHooks;
   return result;
 }

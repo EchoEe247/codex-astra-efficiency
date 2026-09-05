@@ -102,6 +102,7 @@ async function readinessProbe() {
   const codexCommand = resolveCodexCommand();
   const config = loadConfig();
   const hookCommand = checkHookCommand({ command: CAE_HOOK_COMMAND });
+  const nativeHooks = hookReadiness();
   const [quotaResult, modelResult] = await Promise.allSettled([
     readAccountRateLimits({ codexCommand }),
     readModelList({ codexCommand })
@@ -120,7 +121,7 @@ async function readinessProbe() {
       status: "native_read_unavailable",
       codexCommand,
       codex: codexVersion(codexCommand),
-      nativeHooks: hookReadiness(),
+      nativeHooks,
       hookCommand,
       configReadable: config.warning === null,
       failures,
@@ -131,13 +132,14 @@ async function readinessProbe() {
   return {
     codexCommand,
     codex: codexVersion(codexCommand),
-    nativeHooks: hookReadiness(),
+    nativeHooks,
     configReadable: config.warning === null,
     ...summarizeAstraReadiness({
       modelPayload: modelResult.value.result,
       rateLimitPayload: quotaResult.value.result,
       configuredModelIds: config.astraModelIds,
-      hookCommand
+      hookCommand,
+      nativeHooks
     })
   };
 }
