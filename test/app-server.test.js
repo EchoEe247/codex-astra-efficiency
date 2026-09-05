@@ -460,7 +460,7 @@ test(
       fs.writeFileSync(shimPath, script);
 
       const version = probeCodexVersion(shimPath);
-      assert.equal(version.status, "ok");
+      assert.equal(version.status, "ok", JSON.stringify(version));
       assert.match(version.version, /codex 1\.2\.3/);
 
       const limits = await readAccountRateLimits({ codexCommand: shimPath });
