@@ -78,7 +78,7 @@ export function prepareProcessInvocation(
     const comspec = env?.ComSpec || env?.COMSPEC || "cmd.exe";
     return {
       file: comspec,
-      args: ["/d", "/s", "/c", command, ...safeArgs]
+      args: ["/d", "/c", command, ...safeArgs]
     };
   }
   return {

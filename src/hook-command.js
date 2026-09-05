@@ -185,7 +185,7 @@ export function probeHookBinary(
     const comspec = env?.ComSpec || env?.COMSPEC || "cmd.exe";
     let result;
     try {
-      result = spawnSyncImpl(comspec, ["/d", "/s", "/c", resolvedPath, "--help"], {
+      result = spawnSyncImpl(comspec, ["/d", "/c", resolvedPath, "--help"], {
         encoding: "utf8",
         timeout: timeoutMs,
         windowsHide: true

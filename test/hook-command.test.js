@@ -27,7 +27,7 @@ function okSpawn(expectedPath) {
 function okCmdSpawn(expectedComspec, expectedShimPath) {
   return (resolved, args) => {
     assert.equal(resolved, expectedComspec);
-    assert.deepEqual(args, ["/d", "/s", "/c", expectedShimPath, "--help"]);
+    assert.deepEqual(args, ["/d", "/c", expectedShimPath, "--help"]);
     return { status: 0, stdout: "usage", stderr: "" };
   };
 }
