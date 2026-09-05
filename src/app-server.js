@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import readline from "node:readline";
 
 export const APP_SERVER_CLIENT_NAME = "codex-astra-efficiency";
-export const APP_SERVER_CLIENT_VERSION = "0.0.0-dev";
+export const APP_SERVER_CLIENT_VERSION = "0.1.0";
 export const CODEX_COMMAND_ENV = "CAE_CODEX_COMMAND";
 export const CODEX_VERSION_TIMEOUT_MS = 4000;
 
@@ -78,7 +78,7 @@ export function prepareProcessInvocation(
     const comspec = env?.ComSpec || env?.COMSPEC || "cmd.exe";
     return {
       file: comspec,
-      args: ["/d", "/s", "/c", command, ...safeArgs]
+      args: ["/d", "/c", command, ...safeArgs]
     };
   }
   return {

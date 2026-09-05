@@ -76,7 +76,7 @@ test("builds the current Codex initialize handshake without a jsonrpc field", ()
       clientInfo: {
         name: "codex-astra-efficiency",
         title: "Codex Astra Efficiency",
-        version: "0.0.0-dev"
+        version: "0.1.0"
       },
       capabilities: null
     }
@@ -313,14 +313,14 @@ test("rejects when stream closes prematurely", async () => {
   assert.match(err.message, /codex_app_server_closed_before_response/);
 });
 
-test("F1: win32 default codex.cmd uses ComSpec /d /s /c dispatch", () => {
+test("F1: win32 default codex.cmd uses ComSpec /d /c dispatch", () => {
   const comspec = "C:\\Windows\\System32\\cmd.exe";
   const inv = prepareProcessInvocation("codex.cmd", ["app-server", "--listen", "stdio://"], {
     platform: "win32",
     env: { ComSpec: comspec }
   });
   assert.equal(inv.file, comspec);
-  assert.deepEqual(inv.args, ["/d", "/s", "/c", "codex.cmd", "app-server", "--listen", "stdio://"]);
+  assert.deepEqual(inv.args, ["/d", "/c", "codex.cmd", "app-server", "--listen", "stdio://"]);
 });
 
 test("F1: explicit C:\\path with spaces\\codex.cmd uses ComSpec and preserves path", () => {
@@ -332,10 +332,9 @@ test("F1: explicit C:\\path with spaces\\codex.cmd uses ComSpec and preserves pa
   });
   assert.equal(inv.file, comspec);
   assert.equal(inv.args[0], "/d");
-  assert.equal(inv.args[1], "/s");
-  assert.equal(inv.args[2], "/c");
-  assert.equal(inv.args[3], shim);
-  assert.deepEqual(inv.args.slice(4), ["app-server", "--listen", "stdio://"]);
+  assert.equal(inv.args[1], "/c");
+  assert.equal(inv.args[2], shim);
+  assert.deepEqual(inv.args.slice(3), ["app-server", "--listen", "stdio://"]);
 });
 
 test("F1: Windows .bat launcher routes through ComSpec", () => {
@@ -346,7 +345,7 @@ test("F1: Windows .bat launcher routes through ComSpec", () => {
     env: { ComSpec: comspec }
   });
   assert.equal(inv.file, comspec);
-  assert.deepEqual(inv.args, ["/d", "/s", "/c", batPath, "--version"]);
+  assert.deepEqual(inv.args, ["/d", "/c", batPath, "--version"]);
 });
 
 test("F1: Windows native .exe launcher uses direct process execution", () => {
@@ -378,7 +377,7 @@ test("F1: custom CAE_CODEX_COMMAND is preserved and dispatched correctly", () =>
     env: { ComSpec: "C:\\Windows\\cmd.exe" }
   });
   assert.equal(inv.file, "C:\\Windows\\cmd.exe");
-  assert.equal(inv.args[3], "C:\\my tools\\custom-codex.cmd");
+  assert.equal(inv.args[2], "C:\\my tools\\custom-codex.cmd");
 });
 
 test("F1: missing ComSpec falls back to cmd.exe on Windows", () => {
@@ -387,7 +386,7 @@ test("F1: missing ComSpec falls back to cmd.exe on Windows", () => {
     env: {}
   });
   assert.equal(inv.file, "cmd.exe");
-  assert.deepEqual(inv.args, ["/d", "/s", "/c", "codex.cmd", "--version"]);
+  assert.deepEqual(inv.args, ["/d", "/c", "codex.cmd", "--version"]);
 });
 
 test("F1: arguments remain safely separated in invocation args array", () => {
@@ -396,8 +395,8 @@ test("F1: arguments remain safely separated in invocation args array", () => {
     platform: "win32",
     env: { ComSpec: "cmd.exe" }
   });
-  assert.equal(inv.args.length, 3 + 1 + args.length);
-  assert.deepEqual(inv.args.slice(4), args);
+  assert.equal(inv.args.length, 2 + 1 + args.length);
+  assert.deepEqual(inv.args.slice(3), args);
 });
 
 test(
@@ -424,6 +423,43 @@ test(
 
       const version = probeCodexVersion(shimPath);
       assert.equal(version.status, "ok");
+      assert.match(version.version, /codex 1\.2\.3/);
+
+      const limits = await readAccountRateLimits({ codexCommand: shimPath });
+      assert.equal(limits.initialized, true);
+      assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+);
+
+test(
+  "end-to-end real Windows .cmd shim with spaces in directory path launches app-server and answers readAccountRateLimits",
+  { skip: process.platform !== "win32" },
+  async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-win-test-"));
+    try {
+      const spaceDir = path.join(tmpDir, "CAE Windows Test");
+      fs.mkdirSync(spaceDir, { recursive: true });
+      const shimPath = path.join(spaceDir, "codex.cmd");
+      const script = [
+        "@echo off",
+        'if "%1"=="--version" (',
+        "  echo codex 1.2.3",
+        "  exit /b 0",
+        ")",
+        'if "%1"=="app-server" (',
+        '  echo {"id":1,"result":{"clientInfo":{"name":"test"}}}',
+        '  echo {"id":2,"result":{"rateLimits":{"planType":"plus"}}}',
+        "  exit /b 0",
+        ")",
+        "exit /b 1"
+      ].join("\r\n");
+      fs.writeFileSync(shimPath, script);
+
+      const version = probeCodexVersion(shimPath);
+      assert.equal(version.status, "ok", JSON.stringify(version));
       assert.match(version.version, /codex 1\.2\.3/);
 
       const limits = await readAccountRateLimits({ codexCommand: shimPath });

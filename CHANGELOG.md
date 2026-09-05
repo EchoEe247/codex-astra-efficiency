@@ -4,6 +4,12 @@ All notable user-facing changes to Codex Astra Efficiency (CAE) are recorded her
 
 ## [Unreleased]
 
+Future patch/minor changes will be recorded here after the first public release.
+
+## [0.1.0] — 2026-09-05
+
+First public early release. v0.1.0 focuses on trustworthy Astra observability, safe native-Codex integration, clean setup/uninstall, and truthful documentation. It does not claim a fixed percentage of quota savings or a validated default efficiency intervention.
+
 ### Added
 
 - Public install/setup/readiness/uninstall documentation.
@@ -31,6 +37,9 @@ All notable user-facing changes to Codex Astra Efficiency (CAE) are recorded her
 - CAE does not persist raw prompts, responses, source code, cwd paths, account identity, or raw native session/turn ids in its observation events.
 - Hook failures remain fail-open so CAE does not block productive Codex turns.
 
-## [0.1.0] — planned
+### Deferred beyond v0.1.0
 
-The first public release will prioritize trustworthy Astra observability, safe native-Codex integration, clean setup/uninstall, and truthful documentation. It will not claim a fixed percentage of quota savings or a validated default efficiency intervention unless the final release evidence supports one.
+- Native per-turn token accounting and automatic task classification.
+- Richer usage analytics/dashboards.
+- Evidence-backed default efficiency interventions.
+- Native Termux Codex support pending its separate compatibility lane.

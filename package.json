@@ -1,11 +1,21 @@
 {
   "name": "codex-astra-efficiency",
-  "version": "0.0.0-dev",
+  "version": "0.1.0",
   "description": "A lightweight Astra-specific efficiency layer for ChatGPT Plus users in Codex.",
   "type": "module",
   "bin": {
     "cae": "./bin/cae.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "LICENSE",
+    "docs/INSTALL.md",
+    "docs/CODEX_COMPATIBILITY.md"
+  ],
   "scripts": {
     "test": "node --test",
     "check": "node --check bin/cae.js && node --check src/app-server.js && node --check src/config.js && node --check src/hook.js && node --check src/observe.js && node --check src/hooks-config.js && node --check src/hook-command.js && node --check src/model-discovery.js && node --check src/rate-limits.js && node --check src/readiness.js && node --check src/measurement.js && node --check src/receipts.js && node --check src/setup.js"
@@ -13,6 +23,14 @@
   "engines": {
     "node": ">=20"
   },
-  "private": true,
-  "license": "UNLICENSED"
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EchoEe247/codex-astra-efficiency.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EchoEe247/codex-astra-efficiency/issues"
+  },
+  "homepage": "https://github.com/EchoEe247/codex-astra-efficiency#readme"
 }

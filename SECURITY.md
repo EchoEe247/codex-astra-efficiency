@@ -8,7 +8,9 @@ Until the first public release, only the latest release candidate is supported. 
 
 Please do not open a public issue for a vulnerability that could expose or modify sensitive local data, credentials, Codex authentication state, prompts/source, or unrelated user configuration.
 
-Use GitHub's private vulnerability-reporting/security-advisory flow for this repository when it is available. If private reporting is not available, contact the maintainer privately before publishing details.
+Use GitHub Private Vulnerability Reporting (`Security` -> `Report a vulnerability`) on this repository once public. If private reporting is not available, contact the maintainer privately before publishing details.
+
+> **Release Boundary Action:** When repository visibility becomes PUBLIC, maintainers will enable GitHub Private Vulnerability Reporting (`OWNER_UI_ACTION_AT_RELEASE`).
 
 Include only the minimum information needed to reproduce the problem:
 
