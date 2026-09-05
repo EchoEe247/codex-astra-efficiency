@@ -223,3 +223,47 @@ test("does not call a reset-crossing change usage burn", () => {
     }
   );
 });
+
+test("F4 negative tests: reset continuity with null resetsAt", () => {
+  const startEpoch = 1000;
+  const endEpoch = 1000;
+
+  // Case A: start.resetsAt = null, end.resetsAt = valid -> must NOT return measured
+  const resA = calculateWindowDelta(
+    { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: null },
+    { status: "reported", durationMins: 300, usedPercent: 15, resetsAt: endEpoch }
+  );
+  assert.notEqual(resA.status, "measured");
+  assert.equal(resA.status, "reset_boundary_unknown");
+
+  // Case B: start.resetsAt = valid, end.resetsAt = null -> must NOT return measured
+  const resB = calculateWindowDelta(
+    { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: startEpoch },
+    { status: "reported", durationMins: 300, usedPercent: 15, resetsAt: null }
+  );
+  assert.notEqual(resB.status, "measured");
+  assert.equal(resB.status, "reset_boundary_unknown");
+
+  // Case C: start.resetsAt = null, end.resetsAt = null -> must NOT return measured
+  const resC = calculateWindowDelta(
+    { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: null },
+    { status: "reported", durationMins: 300, usedPercent: 15, resetsAt: null }
+  );
+  assert.notEqual(resC.status, "measured");
+  assert.equal(resC.status, "reset_boundary_unknown");
+
+  // Case D: start.resetsAt = valid1, end.resetsAt = valid2 -> reset_boundary
+  const resD = calculateWindowDelta(
+    { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: 1000 },
+    { status: "reported", durationMins: 300, usedPercent: 15, resetsAt: 2000 }
+  );
+  assert.equal(resD.status, "reset_boundary");
+
+  // Case E: start.resetsAt = valid1, end.resetsAt = valid1 -> normal measured behavior preserved
+  const resE = calculateWindowDelta(
+    { status: "reported", durationMins: 300, usedPercent: 10, resetsAt: 1000 },
+    { status: "reported", durationMins: 300, usedPercent: 15, resetsAt: 1000 }
+  );
+  assert.equal(resE.status, "measured");
+  assert.equal(resE.usedPercentDelta, 5);
+});

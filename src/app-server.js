@@ -78,87 +78,124 @@ async function requestLocalCodex({
   spawnImpl = spawn
 }) {
   const command = resolveCodexCommand({ codexCommand, env, platform });
-  const child = spawnImpl(command, ["app-server", "--listen", "stdio://"], {
-    stdio: ["pipe", "pipe", "pipe"],
-    windowsHide: true
-  });
+
+  let child;
+  try {
+    child = spawnImpl(command, ["app-server", "--listen", "stdio://"], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true
+    });
+  } catch (err) {
+    throw new Error(`codex_app_server_spawn_failed:${err.message}`);
+  }
 
   if (!child?.stdin || !child?.stdout || !child?.stderr) {
     safeKill(child);
     throw new Error("codex_app_server_stdio_unavailable");
   }
 
-  let stderr = "";
-  child.stderr.setEncoding?.("utf8");
-  child.stderr.on?.("data", (chunk) => {
-    stderr += String(chunk);
-    if (stderr.length > 8192) stderr = stderr.slice(-8192);
-  });
+  return new Promise((resolve, reject) => {
+    let stderr = "";
+    let initialized = false;
+    let settled = false;
+    let lines;
 
-  const lines = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
-  const initId = 1;
-  const requestId = 2;
-  let initialized = false;
-  let timedOut = false;
+    const timer = setTimeout(() => {
+      settle(new Error(`codex_app_server_timeout:${method}`));
+    }, timeoutMs);
 
-  const timer = setTimeout(() => {
-    timedOut = true;
-    safeKill(child);
-  }, timeoutMs);
+    function settle(err, result) {
+      if (settled) return;
+      settled = true;
 
-  try {
-    writeMessage(child.stdin, initializeRequest(initId));
+      clearTimeout(timer);
+      if (lines) {
+        try {
+          lines.close();
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
+      try {
+        child.stdin.end();
+      } catch {
+        // Best-effort cleanup only.
+      }
+      safeKill(child);
 
-    for await (const line of lines) {
-      if (!line.trim()) continue;
+      if (err) reject(err);
+      else resolve(result);
+    }
+
+    child.on?.("error", (err) => {
+      settle(new Error(`codex_app_server_spawn_failed:${err.message}`));
+    });
+
+    let stderrBuffer = "";
+    child.stderr.setEncoding?.("utf8");
+    child.stderr.on?.("data", (chunk) => {
+      stderrBuffer += String(chunk);
+      if (stderrBuffer.length > 8192) stderrBuffer = stderrBuffer.slice(-8192);
+      stderr = stderrBuffer;
+    });
+
+    lines = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const initId = 1;
+    const requestId = 2;
+
+    lines.on("line", (line) => {
+      if (settled || !line.trim()) return;
 
       let message;
       try {
         message = JSON.parse(line);
       } catch {
-        continue;
+        return;
       }
 
-      if (message?.id === initId) {
-        if (message.error) {
-          throw new Error(`codex_app_server_initialize_failed:${message.error.message ?? "unknown"}`);
+      try {
+        if (message?.id === initId) {
+          if (message.error) {
+            throw new Error(`codex_app_server_initialize_failed:${message.error.message ?? "unknown"}`);
+          }
+          if (!Object.prototype.hasOwnProperty.call(message, "result")) return;
+          initialized = true;
+          writeMessage(child.stdin, initializedNotification());
+          writeMessage(child.stdin, appServerRequest(requestId, method, params));
+          return;
         }
-        if (!Object.prototype.hasOwnProperty.call(message, "result")) continue;
-        initialized = true;
-        writeMessage(child.stdin, initializedNotification());
-        writeMessage(child.stdin, appServerRequest(requestId, method, params));
-        continue;
-      }
 
-      if (message?.id === requestId) {
-        if (message.error) {
-          throw new Error(
-            `codex_app_server_request_failed:${method}:${message.error.message ?? "unknown"}`
-          );
+        if (message?.id === requestId) {
+          if (message.error) {
+            throw new Error(
+              `codex_app_server_request_failed:${method}:${message.error.message ?? "unknown"}`
+            );
+          }
+          if (!Object.prototype.hasOwnProperty.call(message, "result")) return;
+          settle(null, {
+            result: message.result,
+            initialized,
+            command,
+            stderr: stderr.trim() || null
+          });
         }
-        if (!Object.prototype.hasOwnProperty.call(message, "result")) continue;
-        return {
-          result: message.result,
-          initialized,
-          command,
-          stderr: stderr.trim() || null
-        };
+      } catch (err) {
+        settle(err);
       }
-    }
+    });
 
-    if (timedOut) throw new Error(`codex_app_server_timeout:${method}`);
-    const suffix = stderr.trim() ? `:${stderr.trim()}` : "";
-    throw new Error(`codex_app_server_closed_before_response:${method}${suffix}`);
-  } finally {
-    clearTimeout(timer);
-    lines.close();
+    lines.on("close", () => {
+      if (settled) return;
+      const suffix = stderr.trim() ? `:${stderr.trim()}` : "";
+      settle(new Error(`codex_app_server_closed_before_response:${method}${suffix}`));
+    });
+
     try {
-      child.stdin.end();
-    } catch {
-      // Best-effort cleanup only.
+      writeMessage(child.stdin, initializeRequest(initId));
+    } catch (err) {
+      settle(err);
     }
-    safeKill(child);
-  }
+  });
 }
 
 /**

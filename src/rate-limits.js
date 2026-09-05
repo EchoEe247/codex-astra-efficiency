@@ -308,11 +308,15 @@ export function calculateWindowDelta(start, end) {
     return { status: "incompatible_window" };
   }
 
-  if (
-    start.resetsAt !== null &&
-    end.resetsAt !== null &&
-    start.resetsAt !== end.resetsAt
-  ) {
+  if (start.resetsAt === null || end.resetsAt === null) {
+    return {
+      status: "reset_boundary_unknown",
+      startUsedPercent: start.usedPercent,
+      endUsedPercent: end.usedPercent
+    };
+  }
+
+  if (start.resetsAt !== end.resetsAt) {
     return {
       status: "reset_boundary",
       startUsedPercent: start.usedPercent,
