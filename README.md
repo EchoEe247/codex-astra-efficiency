@@ -51,8 +51,9 @@ Implemented:
 - native purchased-credit snapshot preservation when Codex reports it, without inventing a unit or dollar conversion;
 - model-aware quota authority selection using exact native model metadata when available;
 - privacy-safe measurement descriptors for task shape and outcome quality;
-- local Astra run-receipt schema v2 with allowance, workload, objective, validation, subagent/tool, intervention, scope, and rework evidence;
+- local Astra run-receipt schema v3 with campaign and cause classification plus allowance, workload, objective, validation, subagent/tool, intervention, scope, and rework evidence;
 - read-only native-model discovery that never silently activates an Astra candidate;
+- read-only `cae readiness` summary for Astra candidate, target configuration, and quota authority before live inference;
 - explicit Codex launcher override for environments where the user's normal wrapper provides required runtime setup;
 - Ubuntu and Windows CI, with macOS coverage added to the Window 0 preparation lane.
 
@@ -90,6 +91,7 @@ If the user's working Codex command is a wrapper or a different executable path,
 ```text
 CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae doctor
 CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae probe
+CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness
 CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae quota
 ```
 
@@ -120,6 +122,7 @@ These commands exist for development and compatibility validation; they are not 
 ```text
 cae doctor
 cae probe
+cae readiness
 cae quota
 cae setup --dry-run
 cae setup
@@ -134,6 +137,7 @@ cae events
 Key behavior:
 
 - `cae probe` is read-only and checks the local Codex app-server quota/model surfaces.
+- `cae readiness` is read-only and reduces the zero-inference pre-Astra state to one result: Astra discovery, exact target configuration, live quota authority, and the next safe action. It never silently configures a target.
 - `cae setup` adds only CAE-owned `UserPromptSubmit` and `Stop` hooks to the normal Codex home.
 - `cae target ...` is a private validation/compatibility control; the public product goal is zero-friction Astra targeting after the exact production picker identity is validated.
 - `cae events` contains only targeted-model baseline observations and excludes raw prompt/response/path content.
