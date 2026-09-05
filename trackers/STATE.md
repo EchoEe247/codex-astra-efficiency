@@ -4,9 +4,9 @@ Last updated: 2026-09-04
 
 ## Current phase
 
-**ASTRA LIVE ON TEST PLUS ACCOUNT / WINDOW 0 PRE-RELEASE SHAKEDOWN PREP**
+**ASTRA LIVE ON TEST PLUS ACCOUNT / WINDOW 0 ZERO-INFERENCE TERMUX GATE**
 
-The repository remains private while the current Codex runtime is revalidated, the exact production Astra identity/quota shape is captured, and the first partial-allowance shakedown is prepared.
+Window 0 preparation is merged. The repository remains private while the current Codex runtime is revalidated locally, the exact production Astra identity/quota shape is captured, and the first partial-allowance shakedown is gated.
 
 ## Locked product direction
 
@@ -34,7 +34,7 @@ Operator observation on 2026-09-04:
 
 Authority: `receipts/astra-plus-availability-observation-2026-09-04.md`.
 
-Astra rollout waiting is therefore no longer the blocker. The immediate blocker is **current-version live integration capture and Window 0 readiness**.
+Astra rollout waiting is therefore no longer the blocker. The immediate blocker is **current-version local zero-inference acceptance and live integration capture**.
 
 ## Campaign policy
 
@@ -149,7 +149,8 @@ Implemented:
 
 ## Validation status
 
-- Window 0 prep PR #7 CI run #86: **PASS**.
+- Window 0 prep PR #7: **MERGED** as `333ab0a`.
+- PR #7 final CI run #88: **PASS**.
 - Ubuntu Node 20: **PASS**.
 - Ubuntu Node 22: **PASS**.
 - Windows Node 22: **PASS**.
@@ -160,7 +161,7 @@ Implemented:
 - Live exact-target hook observation: **PASS on Sol target; production Astra target still requires live capture**.
 - Live non-target strict no-op: **PASS on 0.149.0; repeat around Astra Window 0**.
 - Setup ownership/uninstall: **PASS on 0.149.0**.
-- Launcher override implementation: **CODE/CI PASS; TERMUX CURRENT-RUNTIME ACCEPTANCE PENDING**.
+- Launcher override implementation: **CODE/CROSS-PLATFORM CI PASS; TERMUX CURRENT-RUNTIME ACCEPTANCE PENDING**.
 - Astra visible in native picker on Plus: **OPERATOR OBSERVED**.
 - Exact native Astra picker/runtime identity: **READY TO CAPTURE**.
 - Native Astra quota-authority shape: **READY TO CAPTURE**.
@@ -168,8 +169,8 @@ Implemented:
 
 ## Immediate execution queue
 
-1. Merge Window 0 preparation after the green PR #7 cross-platform CI result is accepted.
-2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `cae doctor`, `cae probe`, `cae readiness`, and `cae quota`.
+1. Pull merged main into the local Termux checkout.
+2. Revalidate current Codex `0.153.2` locally with `CAE_CODEX_COMMAND=/usr/bin/codex` using `npm test`, `npm run check`, `cae doctor`, `cae probe`, `cae readiness`, and `cae quota`.
 3. Close Issue #6 only if that local launcher acceptance passes without the previous manual workaround.
 4. Run Gate G without spending unnecessary Astra inference: native catalog candidate -> exact target config -> native picker/active model identity -> exact hook identity -> quota-authority selection.
 5. Run Window 0 under Issue #8 using only the remaining pre-reset allowance.
@@ -192,4 +193,4 @@ Implemented:
 
 ## Release posture
 
-CAE is **Astra-live but not yet Astra-validated**. Cross-platform CI now includes macOS and is green. The next blocker is current Termux/Codex `0.153.2` zero-inference acceptance before the controlled Window 0 live Astra task.
+CAE is **Astra-live but not yet Astra-validated**. Window 0 preparation is merged and cross-platform CI includes macOS. The only pre-inference blocker now is current Termux/Codex `0.153.2` zero-inference acceptance before the controlled Window 0 live Astra task.
