@@ -1,18 +1,20 @@
 # Window 1 Candidate Freeze — 2026-09-05
 
 Pre-Window-1 hardening branch: `pre-window1/candidate-freeze` (PR #13) — **SUSPENDED**.
-P1 post-audit hardening branch: `hardening/pre-window1-native-hook-readiness` (PR #14) — **MERGED**.
+P1 post-audit hardening branch: `hardening/pre-window1-native-hook-readiness` (PR #14) — **MERGED / SUSPENDED**.
+P2 post-audit hardening branch: `hardening/pre-window1-audit-p2` (PR #15) — **MERGED**.
 
 ## Refreeze Candidate SHAs
 
-- **OLD_CANDIDATE**: `2025274d51b082c0bdbb96a0d8106f3df28ac45b` (Suspended due to P1 live-capture readiness gate bug identified during the supplemental pre-reset Astra audit)
-- **NEW_CANDIDATE**: `cd314fa4a2755c1ab1f79209243e9351bc859240` (P1 fixed, fully tested and validated, pinned exactly by branch **`window1/candidate`**).
+- **ORIGINAL_CANDIDATE**: `2025274d51b082c0bdbb96a0d8106f3df28ac45b` (Suspended due to P1 live-capture readiness gate bug identified during the supplemental pre-reset Astra audit)
+- **P1_INTERIM_CANDIDATE**: `cd314fa4a2755c1ab1f79209243e9351bc859240` (Suspended to harden remaining P2 findings before Window 1 reset)
+- **FINAL_POST_AUDIT_CANDIDATE**: `9ee6aaa331590fdb07638fc816a194080b66d9ed` (P1 and P2 findings fully resolved, tested, and validated. Pinned exactly by branch **`window1/candidate`**).
 
 No commits may be added to `window1/candidate` after this final refreeze.
 
 - **TESTS & CI**:
-  - Full CI matrix green: Ubuntu Node 20/22, Windows Node 22, macOS Node 22 (PR #14 run ID 33971334662).
-  - Local test suite: 87/86/0/1 (all 86 passing, 1 skipped).
+  - Full CI matrix green: Ubuntu Node 20/22, Windows Node 22, macOS Node 22 (PR #15 run ID 33973322268).
+  - Local test suite: 94/92/0/1 (all 92 passing, 1 skipped).
   - `npm run check` and `git diff --check` both PASS.
   - Worktree clean on both native Termux and rootfs checkouts.
 
