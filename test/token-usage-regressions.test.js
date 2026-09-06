@@ -25,3 +25,15 @@ test("cache leverage stays unknown when cached input exceeds total input", () =>
   assert.equal(normalized.cachedInput, 101);
   assert.equal(normalized.cacheLeverage, null);
 });
+
+test("reasoning fraction stays unknown when reasoning output exceeds total output", () => {
+  const normalized = normalizeTokenBreakdown({
+    inputTokens: 100,
+    outputTokens: 10,
+    reasoningOutputTokens: 11
+  });
+
+  assert.equal(normalized.output, 10);
+  assert.equal(normalized.reasoningOutput, 11);
+  assert.equal(normalized.reasoningFraction, null);
+});
