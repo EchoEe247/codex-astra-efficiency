@@ -1,6 +1,8 @@
 # Contributing to Codex Astra Efficiency
 
-Contributions are welcome. CAE is small by design, so focused changes with clear evidence are preferred over broad rewrites.
+Contributions are welcome. CAE is intentionally small, so focused changes with clear evidence are more useful than broad rewrites that make the system harder to reason about.
+
+I also want outside contributions to be treated seriously. A correct community patch does not need to be rewritten by the maintainer just to become acceptable; it does need the same independent review and validation that maintainer-authored work receives.
 
 ## Before opening a change
 
@@ -11,23 +13,25 @@ For bugs, open an issue first when practical and include:
 - operating system/runtime;
 - ChatGPT plan if relevant to the behavior;
 - model and reasoning level if the report concerns Astra usage;
-- the CAE command or workflow that failed;
+- CAE command or workflow that failed;
 - sanitized output and exact reproduction steps.
 
-Do **not** include raw prompts, source code you cannot share, Codex transcripts, credentials, cookies, API keys, account identifiers, or raw native session/turn ids.
+Do **not** include raw prompts, private source code, Codex transcripts, credentials, cookies, API keys, account identifiers, or raw native session/turn ids.
 
-A report is treated as evidence to investigate, not automatically as a confirmed product bug. Maintainers may reproduce and reclassify it before changing CAE.
+A report is evidence to investigate. It is not automatically a confirmed CAE bug until the project can reproduce or otherwise validate the claim.
 
 ## Pull requests
 
-Keep pull requests narrow. A good PR:
+Keep pull requests narrow enough that the problem, fix, and validation remain understandable.
+
+A strong PR:
 
 1. explains the problem;
-2. includes a reproduction or failing test when possible;
-3. makes the smallest correct change;
+2. includes a reproduction or failing test when practical;
+3. makes the smallest coherent correct change;
 4. adds focused regression coverage;
 5. preserves CAE's privacy and native-Codex constraints;
-6. passes the full test/check suite.
+6. passes the relevant full test/check suite.
 
 Run before submitting:
 
@@ -37,7 +41,7 @@ npm run check
 git diff --check
 ```
 
-Do not weaken tests or validation gates merely to make a PR pass.
+Do not weaken a test or validation gate merely to turn the PR green.
 
 ## Product constraints contributors must preserve
 
@@ -50,12 +54,14 @@ Do not weaken tests or validation gates merely to make a PR pass.
 - CAE does not invoke or automate usage resets.
 - CAE does not collect OpenAI credentials.
 - CAE does not persist raw prompts, responses, source code, cwd paths, or raw native session/turn identifiers.
-- Setup/uninstall must preserve unrelated Codex configuration.
-- Hook failures must fail open rather than block a user's productive Codex turn.
+- Setup/uninstall preserves unrelated Codex configuration.
+- Hook failures fail open rather than blocking a productive Codex turn.
+
+These are product boundaries, not style preferences. A change that violates one of them needs an explicit product decision rather than slipping in as an implementation detail.
 
 ## Dependencies
 
-New runtime dependencies require a concrete justification. Prefer the Node.js standard library when it keeps the implementation clear and maintainable.
+New runtime dependencies need a concrete reason. Prefer the Node.js standard library when it keeps the implementation clear and maintainable.
 
 Dependency changes receive extra review for:
 
@@ -81,35 +87,35 @@ Do not introduce:
 
 ## Usage and measurement changes
 
-Changes to quota parsing, token accounting, receipts, or efficiency calculations should include recorded/synthetic fixtures covering ambiguous and failure states.
+Changes to quota parsing, token accounting, receipts, or efficiency calculations should include recorded or synthetic fixtures covering ambiguous and failure states.
 
-Never infer a numerical result when the native evidence cannot support it. In particular, do not calculate across an unknown or changed quota reset boundary.
+Never produce a numerical result when the native evidence cannot support it. In particular, do not calculate a usage delta across an unknown or changed quota reset boundary.
 
-Any claimed efficiency intervention must be optional or otherwise explicitly justified by real Astra evidence before becoming a default.
+An efficiency intervention does not become a default because it sounds token-efficient. It needs real Astra evidence and a quality guardrail.
 
-## How maintainer review works
-
-A community PR can be merged directly when it is correct; maintainers do not need to recreate the patch merely because it came from an external contributor. However, every contribution is independently reviewed.
+## Maintainer review
 
 Before merge, maintainers may perform:
 
 - complete diff review;
 - regression reproduction;
 - test-integrity review;
-- dependency/lockfile review;
+- dependency and lockfile review;
 - secret and credential scanning;
-- suspicious shell/process/network behavior review;
+- shell/process/network behavior review;
 - workflow-permission review;
 - privacy-model review;
 - cross-platform CI;
 - clean package/install/uninstall smoke tests for affected surfaces.
 
-A technically plausible patch is not merged until the project can explain why it is correct and safe.
+The practical standard is that the project should be able to explain why a patch is correct and safe, not merely that the code looks plausible.
 
-## Scope and style
+## Scope and history
 
-Use clear names and straightforward code. Avoid speculative abstractions unrelated to the issue being solved. Historical receipts should remain historical; update current-state authorities instead of rewriting old evidence.
+Use clear names and straightforward code. Avoid speculative abstractions unrelated to the issue being solved.
+
+Historical receipts stay historical. If current state changes, update the current authority instead of rewriting old evidence to make the past look current.
 
 ## Security issues
 
-Do not open a public issue for a vulnerability that could expose credentials, private prompts/source, local files, or create destructive behavior. Follow `SECURITY.md` instead.
+Do not open a public issue for a vulnerability that could expose credentials, private prompts/source, local files, or unrelated user configuration, or that could create destructive behavior. Follow `SECURITY.md` instead.
