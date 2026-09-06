@@ -1,0 +1,9 @@
+{
+  "input_tokens": 12000,
+  "cached_input_tokens": 10000,
+  "cache_write_input_tokens": 2000,
+  "output_tokens": 600,
+  "reasoning_output_tokens": 200,
+  "total_tokens": 12600,
+  "model_context_window": 258400
+}

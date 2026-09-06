@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-function opaqueKey(namespace, value) {
+export function opaqueKey(namespace, value) {
   if (typeof value !== "string" || !value) return null;
   return crypto
     .createHash("sha256")

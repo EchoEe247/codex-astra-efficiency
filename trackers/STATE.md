@@ -4,18 +4,24 @@ Last updated: 2026-09-05
 
 ## Current release state
 
-- **V0_1_LIVE_RC_VALIDATION:** PASS
-- **LIVE_VALIDATED_SHA:** 44358f5155d031a6d40287cf3f08b90bf6809bd3
-- **RESET_CREDITS_REMAINING:** 1 (second banked reset untouched)
-- **PUBLICATION_STATUS:** READY_FOR_PUBLICATION
+- **PUBLIC_RELEASE:** v0.1.0
+- **PUBLICATION_STATUS:** V0_1_0_PUBLIC
+- **FINAL_PUBLICATION_SHA:** 29cb39eb136ed09ad2a3f2e40319a749bc568de1
+- **LIVE_VALIDATED_RUNTIME_SHA:** 44358f5155d031a6d40287cf3f08b90bf6809bd3
+- **RESET_CREDITS_REMAINING:** 1
+- **CURRENT_PHASE:** POST_V0_1_PASSIVE_MEASUREMENT
+- **PRIMARY_ISSUE:** #21
 
 
 ## Current phase
 
-**WINDOW 0 COMPLETE / PRE-WINDOW-1 HARDENING**
+**POST_V0_1_PASSIVE_MEASUREMENT (Issue #21)**
 
-Window 0 is CLOSED. No more Astra inference belongs to Window 0. All
-substantive Window 0 evidence:
+v0.1.0 is publicly released at `29cb39eb136ed09ad2a3f2e40319a749bc568de1`.
+Window 1 / Window 2 are historical experiment plans, not current release gates.
+Work is now focused on the post-v0.1 passive native token accounting foundation
+(Issue #21) under zero model inference and zero banked reset consumption.
+Issue #9 native Termux remains a separate compatibility lane.
 
 ### Window 0 evidence
 
@@ -301,4 +307,9 @@ A supplemental pre-reset Astra audit was executed at 13:03Z to inspect the froze
 
 ## Release posture
 
-CAE is **live-Astra validated end-to-end** (Window 0 closed 2026-09-05): exact target, real hook capture, rootfs sandboxed writes, and the full setup/uninstall safety audit all pass on the authoritative runtime, with cross-platform CI green. Post-freeze pre-reset Astra audit has been recovered; the old candidate `2025274d51b082c0bdbb96a0d8106f3df28ac45b` was **SUSPENDED** due to P1 readiness gate bug, and the interim candidate `ac194ac1b07e1c334285b797127730ed810bed73` was **SUSPENDED** to complete P2 hardening. All four findings (P1 readiness, P2 spawn error handling, P3 timeout settlement, P4 reset-boundary continuity) have been fully resolved, regression-tested, and merged to main. A final post-audit refreeze is complete; the final replacement candidate `9ee6aaa331590fdb07638fc816a194080b66d9ed` is **VALID** (pinned exactly on branch **`window1/candidate`**). Banked resets remain untouched at **2 remaining** and Window 1 has **not started**. Gaps A–F are explicit, support boundary declared (codexu authoritative; native Termux NOT claimed until Issue #9), and control starts at native-default `low`. Window 1 waits ONLY for an explicitly authorized banked reset (one planned; second untouched).
+v0.1.0 is publicly released (`V0_1_0_PUBLIC`) at commit `29cb39eb136ed09ad2a3f2e40319a749bc568de1`, with live validated runtime SHA `44358f5155d031a6d40287cf3f08b90bf6809bd3`.
+Banked resets remaining: **1 remaining** (second reset untouched; zero consumed for post-v0.1 work).
+Current execution phase is **POST_V0_1_PASSIVE_MEASUREMENT** governed by **Issue #21** (passive measurement and native token accounting foundation).
+Historical experiment plans (Window 1 / Window 2) are preserved as historical sequence rather than current release gates.
+Support boundary: codexu runtime is authoritative; native Termux compatibility remains a separate lane under Issue #9.
+All post-v0.1 Phase A work operates strictly under zero model inference and zero banked reset usage.
