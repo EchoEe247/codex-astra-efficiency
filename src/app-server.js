@@ -264,8 +264,35 @@ async function requestLocalCodex({
       }
       safeKill(child);
 
-      if (err) reject(err);
-      else resolve(result);
+      function finish(settleErr, settleResult) {
+        if (settleErr) reject(settleErr);
+        else resolve(settleResult);
+      }
+
+      if (
+        typeof child.exitCode === "number" ||
+        typeof child.signalCode === "string" ||
+        typeof child.once !== "function"
+      ) {
+        finish(err, result);
+        return;
+      }
+
+      let closed = false;
+      const cleanupTimer = setTimeout(() => {
+        if (!closed) {
+          closed = true;
+          finish(err, result);
+        }
+      }, 500);
+
+      child.once("close", () => {
+        if (!closed) {
+          closed = true;
+          clearTimeout(cleanupTimer);
+          finish(err, result);
+        }
+      });
     }
 
     child.on?.("error", (err) => {

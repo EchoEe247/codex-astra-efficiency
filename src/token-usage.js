@@ -5,6 +5,8 @@ import { opaqueKey } from "./observe.js";
 export const MEASUREMENT_SCHEMA_VERSION = 1;
 export const EVENT_TYPE_TURN_MEASUREMENT = "turn_measurement";
 
+export const TRANSCRIPT_TAIL_SCAN_BYTES = 2 * 1024 * 1024; // 2 MiB bounded tail scan
+
 export const TASK_CLASSES = Object.freeze([
   "audit_review",
   "bug_diagnosis",
@@ -258,11 +260,27 @@ export function appendTurnMeasurement(record, dir) {
 
   try {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") {
+      try {
+        const dirStat = fs.statSync(dir);
+        if ((dirStat.mode & 0o077) !== 0) {
+          fs.chmodSync(dir, 0o700);
+        }
+      } catch {}
+    }
     const filePath = path.join(dir, "measurements.jsonl");
     fs.appendFileSync(filePath, `${JSON.stringify(record)}\n`, {
       encoding: "utf8",
       mode: 0o600
     });
+    if (process.platform !== "win32") {
+      try {
+        const fileStat = fs.statSync(filePath);
+        if ((fileStat.mode & 0o077) !== 0) {
+          fs.chmodSync(filePath, 0o600);
+        }
+      } catch {}
+    }
     return filePath;
   } catch {
     // Fail-open: persistence errors must never block Codex turns.
@@ -320,25 +338,49 @@ export function readLastTurnMeasurement(dir) {
  * Passively extracts token usage from a local transcript/rollout JSONL file.
  * Fails open and returns null if file is missing, unreadable, or malformed.
  */
-export function readTokenUsageFromTranscript(transcriptPath) {
+export function readTokenUsageFromTranscript(transcriptPath, options = {}) {
   if (typeof transcriptPath !== "string" || !transcriptPath) return null;
-  try {
-    if (!fs.existsSync(transcriptPath)) return null;
-    const content = fs.readFileSync(transcriptPath, "utf8");
-    const lines = content.trim().split("\n");
+  const maxScanBytes =
+    typeof options?.maxScanBytes === "number" && options.maxScanBytes > 0
+      ? options.maxScanBytes
+      : TRANSCRIPT_TAIL_SCAN_BYTES;
 
+  let fd = null;
+  try {
+    const stat = fs.statSync(transcriptPath);
+    if (!stat.isFile() || stat.size === 0) return null;
+
+    const readSize = Math.min(stat.size, maxScanBytes);
+    const startOffset = stat.size - readSize;
+
+    fd = fs.openSync(transcriptPath, "r");
+    const buffer = Buffer.alloc(readSize);
+    const bytesRead = fs.readSync(fd, buffer, 0, readSize, startOffset);
+    if (bytesRead <= 0) return null;
+
+    let text = buffer.toString("utf8", 0, bytesRead);
+    if (startOffset > 0) {
+      // Discard partial first line if we did not read from the start of the file
+      const firstNewline = text.indexOf("\n");
+      if (firstNewline === -1) return null;
+      text = text.slice(firstNewline + 1);
+    }
+
+    const lines = text.split("\n");
     let lastTokenRecord = null;
     let lastTokenCount = null;
 
     for (let i = lines.length - 1; i >= 0; i--) {
       const line = lines[i]?.trim();
       if (!line) continue;
+      if (!line.includes("token_usage_record") && !line.includes("token_count")) continue;
+
       try {
         const entry = JSON.parse(line);
-        if (!lastTokenRecord && entry.type === "token_usage_record" && entry.payload) {
+        if (!lastTokenRecord && entry?.type === "token_usage_record" && entry?.payload) {
           lastTokenRecord = entry.payload;
         }
-        if (!lastTokenCount && entry.type === "event_msg" && entry.payload?.type === "token_count") {
+        if (!lastTokenCount && entry?.type === "event_msg" && entry?.payload?.type === "token_count") {
           lastTokenCount = entry.payload;
         }
         if (lastTokenRecord && lastTokenCount) break;
@@ -356,6 +398,14 @@ export function readTokenUsageFromTranscript(transcriptPath) {
     };
   } catch {
     return null;
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // Best effort cleanup
+      }
+    }
   }
 }
 

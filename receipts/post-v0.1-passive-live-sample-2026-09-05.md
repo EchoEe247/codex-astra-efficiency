@@ -10,8 +10,8 @@ Target Work Product: EchoEe247/hermes-commerce-control
 ---
 
 ## 1. AUTHORITY & CANDIDATE IDENTITY
-- Initial CAE Candidate SHA: `9e1d2b3367fbed6c8d4a313b0a027c710631fc79`
-- Hardened CAE Candidate SHA: `be2437293a54b38d30e527063d3c799a4c818817`
+- First Live-Sample Candidate SHA: `9e1d2b3367fbed6c8d4a313b0a027c710631fc79`
+- Post-Sample Hardened Head: `e0cdd16650658e9734803953bd8c6e2c7ac0fecd`
 - Branch: `post-v0.1/token-accounting-foundation` (PR #22)
 - Codex CLI Version: `0.153.4`
 - Model Under Work: `gpt-6-astra`

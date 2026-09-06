@@ -432,7 +432,7 @@ test(
       assert.equal(limits.initialized, true);
       assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     }
   }
 );
@@ -469,7 +469,7 @@ test(
       assert.equal(limits.initialized, true);
       assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     }
   }
 );

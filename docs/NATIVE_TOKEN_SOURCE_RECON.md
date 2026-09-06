@@ -110,9 +110,10 @@ type ThreadUsage = {
 
 1. **Protocol Schema Definition:** **PROVEN DETERMINISTIC.** Extracted directly from installed `codex-cli 0.153.2` via `codex app-server generate-json-schema --experimental` and `codex app-server generate-ts --experimental`. The notification `thread/tokenUsage/updated` with payload `ThreadTokenUsageUpdatedNotification` is an officially generated part of the Codex App Server Protocol v2.
 2. **Local Session Log Format:** **PROVEN DETERMINISTIC.** Read-only inspection of historical local Codex rollout session files (`~/.codex/sessions/**/*.jsonl`) confirmed identical underlying token counters emitted in `token_usage_record` and `token_count` (`input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens`, `total_tokens`, `model_context_window: 258400`).
-3. **Live App-Server Notification Over Transport:**
-   `LIVE_NOTIFICATION_SUPPORT: UNVERIFIED_UNTIL_NEXT_REAL_ASTRA_TURN`
-   No model inference was run during this phase. Exact live arrival ordering relative to `turn/completed` will be passively observed on the next genuine Astra turn.
+3. **Live Passive Capture Architecture (Empirical Finding from Sample N=1):**
+   Live verification on the first genuine Astra turn demonstrated that interactive CLI/TUI Codex sessions operate independently of CAE app-server child-process client. Interactive sessions emit command hooks (`UserPromptSubmit` and `Stop`) pointing to local session rollout transcripts (`transcript_path`).
+   - **Primary Live Passive Source:** Bounded tail reading of the rollout transcript on `Stop` hook via `readTokenUsageFromTranscript` (`TRANSCRIPT_TAIL_SCAN_BYTES` = 2 MiB).
+   - **App-Server JSON-RPC Channel:** Protocol-supported for programmatic integrations, but not an attachment point for independent interactive terminal runs.
 4. **Casing Conventions:** Protocol schema uses camelCase (`inputTokens`, `cachedInputTokens`, `cacheWriteInputTokens`, `outputTokens`, `reasoningOutputTokens`, `totalTokens`, `modelContextWindow`), while session rollout logs use snake_case (`input_tokens`, `cached_input_tokens`, etc.). The normalizer must accept both forms.
 5. **Persistence across restart:** Schema indicates notifications are real-time events on the active transport.
 6. **`cacheWriteInputTokens` presence:** The schema sets a default of 0, but older or alternative backend providers may omit it. Normalization treats missing `cacheWriteInputTokens` gracefully as `0` or `null`.
@@ -149,10 +150,16 @@ The native notification payload contains identifiers and context:
    - Strictly parses, validates, and normalizes `ThreadTokenUsage` and `TokenUsageBreakdown` shapes.
    - Rejects non-numeric, negative, or malformed values; leaves missing fields as `null` (never guesses or zero-fills unknowns).
    - Calculates derived fields (`processedVolume`, `cacheLeverage`, `reasoningFraction`) using safe integer/float math.
-2. **Transport Observer (`src/app-server.js`):**
-   - Subscribe to `thread/tokenUsage/updated` notifications on the stdio transport during app-server sessions.
-   - Maintain an in-memory correlation map from transient `threadId:turnId` to CAE's opaque `turnKey`.
+2. **Primary Live Passive Capture (`src/hook.js` & `src/token-usage.js`):**
+   - On native `Stop` hook, inspects `transcript_path` when targeted for Astra.
+   - Bounded backward tail scan (`readTokenUsageFromTranscript`, 2 MiB max scan bound) to extract `token_usage_record` and `token_count`.
+   - Strictly non-persisting for prompts, tool calls, and diffs; persists only approved numeric token counters.
+   - Fails open silently on missing, unreadable, or malformed files.
+3. **Transport Observer (`src/app-server.js`):**
+   - Subscribe to `thread/tokenUsage/updated` notifications on the stdio transport during programmatic app-server sessions.
+   - Maintain an in-memory correlation map from transient `threadId:turnId` to CAE opaque `turnKey`.
    - Never persist raw `threadId` or `turnId`.
-3. **Local Privacy-Safe Storage (`measurements.jsonl`):**
+4. **Local Privacy-Safe Storage (`measurements.jsonl`):**
    - Write normalized turn measurement records to an isolated `measurements.jsonl` stream in the CAE state directory.
+   - Enforce restricted filesystem modes (`0o700` directories, `0o600` files).
    - Preserve existing `events.jsonl` format and backward compatibility without destructive migrations.

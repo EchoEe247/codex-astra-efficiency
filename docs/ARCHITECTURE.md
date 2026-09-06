@@ -29,7 +29,7 @@ flowchart TD
     end
 
     Codex -.->|UserPromptSubmit / Stop\nvia ~/.codex/hooks.json| Hooks
-    Codex -.->|thread/tokenUsage/updated\napp-server notification| TokenNorm
+    Hooks -->|extracts bounded numeric tokens\nfrom local transcript tail on Stop| TokenNorm
     Codex -.->|account/rateLimits/read\nmodel/list| AppServer
     Hooks --> LocalStorage
     TokenNorm --> LocalStorage
@@ -76,16 +76,24 @@ Codex includes an embedded JSON-RPC app-server (`codex app-server --listen stdio
 
 ---
 
-## 3. Native Token-Notification Path (Passive Accounting)
+## 3. Native Token Capture & Accounting Path (Passive Accounting)
 
-In post-v0.1 Phase A, CAE establishes the deterministic foundation for capturing native physical token counters without running synthetic or manufactured Astra inference:
+In post-v0.1 Phase A, CAE establishes the deterministic foundation for capturing native physical token counters without running synthetic or manufactured Astra inference.
 
-- **Notification Method:** `thread/tokenUsage/updated` pushed over the app-server transport.
-- **Transport Handling:** The app-server client handles incoming server notifications asynchronously via an extensible callback (`onNotification`).
-- **Transient Memory Correlation:** Native `threadId` and `turnId` identifiers received in the notification payload are held transiently in memory to correlate with CAE turn keys.
-- **Strict Anonymization:** Raw IDs are immediately converted to 64-character opaque hex hashes (`opaqueKey`) and are **never** written to persistent storage.
+Empirical verification from the first genuine live Astra sample demonstrated that independent interactive Codex sessions execute via standalone CLI/TUI and trigger command hooks rather than running as clients of CAE app-server child process. Accordingly, CAE distinguishes two complementary capture surfaces:
 
----
+### Primary Live Passive Source: Bounded Stop Hook Transcript Reader
+- **Trigger:** Codex fires the native `Stop` hook (`cae hook --cae-owned`) upon turn completion.
+- **Source Authority:** The hook payload supplies `transcript_path` pointing to the active session rollout (`~/.codex/sessions/**/rollout-*.jsonl`).
+- **Bounded Scanning (`TRANSCRIPT_TAIL_SCAN_BYTES` = 2 MiB):** CAE opens the file read-only and inspects only a bounded tail buffer, scanning backwards for `token_usage_record` (`turn_token_usage`) and `event_msg` (`token_count`).
+- **No Full Transcript Allocation:** Whole-file reads are prohibited; the scan is strictly bounded in memory and I/O.
+- **Content-Nonpersisting:** Raw prompt text, assistant responses, diffs, tool calls, and transcript paths are discarded immediately. Only normalized numeric counters (`input`, `cachedInput`, `output`, `reasoningOutput`, `total`, `modelContextWindow`) are retained.
+- **Fail-Open:** Any stat, open, read, or JSON parse error fails open silently without disrupting or delaying Codex.
+
+### Programmatic App-Server Surface: JSON-RPC Notifications
+- **Method:** `thread/tokenUsage/updated` pushed over JSON-RPC stdio transport when Codex is launched via `codex app-server`.
+- **Status:** Protocol-supported and verified with unit coverage; maintained as an integration and research path, but not relied upon as the passive attachment mechanism for independent interactive CLI/TUI sessions.
+- **Strict Anonymization:** Raw IDs received over JSON-RPC are converted to HMAC/SHA-256 opaque keys and never persisted.
 
 ## 4. Local Privacy-Safe Storage
 
