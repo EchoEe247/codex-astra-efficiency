@@ -51,16 +51,19 @@ function sanitizeLabel(value, maxLength = 64) {
 
 function calculateProcessedVolume(total, input, output) {
   if (total !== null) return total;
-  if (input !== null && output !== null) return input + output;
+  if (input !== null && output !== null) {
+    return toNonNegativeSafeInt(input + output);
+  }
   return null;
 }
 
 function calculateCacheLeverage(cachedInput, input) {
   if (cachedInput === null || input === null) return null;
+  if (cachedInput > input) return null;
   if (input === 0) return cachedInput === 0 ? 0.0 : null;
   const ratio = cachedInput / input;
-  if (!Number.isFinite(ratio) || ratio < 0) return null;
-  return Number(Math.min(1.0, ratio).toFixed(4));
+  if (!Number.isFinite(ratio) || ratio < 0 || ratio > 1) return null;
+  return Number(ratio.toFixed(4));
 }
 
 function calculateReasoningFraction(reasoningOutput, output) {
