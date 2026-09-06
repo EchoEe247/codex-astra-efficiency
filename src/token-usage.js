@@ -68,10 +68,11 @@ function calculateCacheLeverage(cachedInput, input) {
 
 function calculateReasoningFraction(reasoningOutput, output) {
   if (reasoningOutput === null || output === null) return null;
+  if (reasoningOutput > output) return null;
   if (output === 0) return reasoningOutput === 0 ? 0.0 : null;
   const ratio = reasoningOutput / output;
-  if (!Number.isFinite(ratio) || ratio < 0) return null;
-  return Number(Math.min(1.0, ratio).toFixed(4));
+  if (!Number.isFinite(ratio) || ratio < 0 || ratio > 1) return null;
+  return Number(ratio.toFixed(4));
 }
 
 /**
