@@ -316,6 +316,49 @@ export function readLastTurnMeasurement(dir) {
   return records.length > 0 ? records[0] : null;
 }
 
+/**
+ * Passively extracts token usage from a local transcript/rollout JSONL file.
+ * Fails open and returns null if file is missing, unreadable, or malformed.
+ */
+export function readTokenUsageFromTranscript(transcriptPath) {
+  if (typeof transcriptPath !== "string" || !transcriptPath) return null;
+  try {
+    if (!fs.existsSync(transcriptPath)) return null;
+    const content = fs.readFileSync(transcriptPath, "utf8");
+    const lines = content.trim().split("\n");
+
+    let lastTokenRecord = null;
+    let lastTokenCount = null;
+
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i]?.trim();
+      if (!line) continue;
+      try {
+        const entry = JSON.parse(line);
+        if (!lastTokenRecord && entry.type === "token_usage_record" && entry.payload) {
+          lastTokenRecord = entry.payload;
+        }
+        if (!lastTokenCount && entry.type === "event_msg" && entry.payload?.type === "token_count") {
+          lastTokenCount = entry.payload;
+        }
+        if (lastTokenRecord && lastTokenCount) break;
+      } catch {
+        // fail-open on malformed lines
+      }
+    }
+
+    if (!lastTokenRecord && !lastTokenCount) return null;
+
+    return {
+      last: lastTokenRecord?.turn_token_usage || lastTokenCount?.info?.last_token_usage || null,
+      total: lastTokenRecord?.thread_token_usage || lastTokenCount?.info?.total_token_usage || null,
+      modelContextWindow: lastTokenCount?.info?.model_context_window ?? null
+    };
+  } catch {
+    return null;
+  }
+}
+
 function formatValue(val, unit = "") {
   if (val === null || val === undefined) return "unavailable";
   if (typeof val === "number") {

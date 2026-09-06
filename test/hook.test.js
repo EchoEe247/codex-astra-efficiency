@@ -135,3 +135,105 @@ test("runHook writes only targeted observations", () => {
   assert.equal(stored.sessionId, undefined);
   assert.equal(stored.turnId, undefined);
 });
+
+test("runHook passively extracts token usage on Stop when transcript is present", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-hook-meas-"));
+  const transcriptPath = path.join(dir, "rollout-sample.jsonl");
+
+  const lines = [
+    JSON.stringify({
+      type: "token_usage_record",
+      payload: {
+        thread_id: "th-01",
+        turn_id: "tu-01",
+        turn_token_usage: {
+          input_tokens: 5000,
+          cached_input_tokens: 4000,
+          output_tokens: 200,
+          reasoning_output_tokens: 50,
+          total_tokens: 5200
+        },
+        thread_token_usage: {
+          input_tokens: 10000,
+          cached_input_tokens: 8000,
+          output_tokens: 500,
+          total_tokens: 10500
+        }
+      }
+    }),
+    JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        info: {
+          model_context_window: 258400
+        }
+      }
+    })
+  ];
+  fs.writeFileSync(transcriptPath, lines.join("\n") + "\n", "utf8");
+
+  const config = {
+    dir,
+    astraModelIds: ["gpt-6-astra"],
+    warning: null
+  };
+
+  runHook(
+    JSON.stringify({
+      hook_event_name: "Stop",
+      model: "gpt-6-astra",
+      session_id: "th-01",
+      turn_id: "tu-01",
+      transcript_path: transcriptPath
+    }),
+    { config }
+  );
+
+  const measFile = path.join(dir, "measurements.jsonl");
+  assert.equal(fs.existsSync(measFile), true);
+  const measLines = fs.readFileSync(measFile, "utf8").trim().split("\n");
+  assert.equal(measLines.length, 1);
+
+  const parsed = JSON.parse(measLines[0]);
+  assert.equal(parsed.model, "gpt-6-astra");
+  assert.equal(parsed.tokens.input, 5000);
+  assert.equal(parsed.tokens.cachedInput, 4000);
+  assert.equal(parsed.tokens.output, 200);
+  assert.equal(parsed.tokens.reasoningOutput, 50);
+  assert.equal(parsed.tokens.total, 5200);
+  assert.equal(parsed.tokens.processedVolume, 5200);
+  assert.equal(parsed.tokens.cacheLeverage, 0.8);
+  assert.equal(parsed.context.window, 258400);
+
+  // Privacy: transcriptPath and raw IDs MUST NOT appear
+  assert.equal(measLines[0].includes(transcriptPath), false);
+  assert.equal(measLines[0].includes("th-01"), false);
+  assert.equal(measLines[0].includes("tu-01"), false);
+});
+
+test("runHook fails open when transcript is missing or unreadable", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-hook-meas-failopen-"));
+  const config = {
+    dir,
+    astraModelIds: ["gpt-6-astra"],
+    warning: null
+  };
+
+  assert.doesNotThrow(() => {
+    runHook(
+      JSON.stringify({
+        hook_event_name: "Stop",
+        model: "gpt-6-astra",
+        session_id: "th-01",
+        turn_id: "tu-01",
+        transcript_path: "/nonexistent/path/impossible.jsonl"
+      }),
+      { config }
+    );
+  });
+
+  // Observation written, measurement gracefully omitted
+  assert.equal(fs.existsSync(path.join(dir, "events.jsonl")), true);
+  assert.equal(fs.existsSync(path.join(dir, "measurements.jsonl")), false);
+});
