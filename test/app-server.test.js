@@ -7,14 +7,17 @@ import test from "node:test";
 import {
   CODEX_COMMAND_ENV,
   CODEX_VERSION_TIMEOUT_MS,
+  accountUsageRequest,
   initializeRequest,
   initializedNotification,
   isWindowsBatch,
   modelListRequest,
+  parseThreadTokenUsageNotification,
   prepareProcessInvocation,
   probeCodexVersion,
   rateLimitsRequest,
   readAccountRateLimits,
+  readAccountUsage,
   readModelList,
   resolveCodexCommand
 } from "../src/app-server.js";
@@ -429,7 +432,7 @@ test(
       assert.equal(limits.initialized, true);
       assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     }
   }
 );
@@ -466,7 +469,7 @@ test(
       assert.equal(limits.initialized, true);
       assert.deepEqual(limits.result, { rateLimits: { planType: "plus" } });
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     }
   }
 );
@@ -670,4 +673,98 @@ test("F4: signal termination returns signal status with null version", () => {
 test("F4: CODEX_VERSION_TIMEOUT_MS constant is in 3000-5000 ms range", () => {
   assert.ok(CODEX_VERSION_TIMEOUT_MS >= 3000, "at least 3000ms");
   assert.ok(CODEX_VERSION_TIMEOUT_MS <= 5000, "at most 5000ms");
+});
+
+test("parseThreadTokenUsageNotification parses valid notification and rejects invalid", () => {
+  const valid = {
+    method: "thread/tokenUsage/updated",
+    params: {
+      threadId: "t-123",
+      turnId: "turn-456",
+      tokenUsage: {
+        last: { inputTokens: 100, outputTokens: 20 },
+        total: { inputTokens: 500, outputTokens: 100 }
+      }
+    }
+  };
+
+  const parsed = parseThreadTokenUsageNotification(valid);
+  assert.deepEqual(parsed, {
+    threadId: "t-123",
+    turnId: "turn-456",
+    tokenUsage: valid.params.tokenUsage
+  });
+
+  assert.equal(parseThreadTokenUsageNotification(null), null);
+  assert.equal(parseThreadTokenUsageNotification({ method: "other/event" }), null);
+  assert.equal(parseThreadTokenUsageNotification({ method: "thread/tokenUsage/updated" }), null);
+});
+
+test("accountUsageRequest formats request correctly", () => {
+  const req1 = accountUsageRequest(5);
+  assert.deepEqual(req1, { id: 5, method: "account/usage/read" });
+
+  const req2 = accountUsageRequest(6, { threadId: "th-789" });
+  assert.deepEqual(req2, {
+    id: 6,
+    method: "account/usage/read",
+    params: { threadId: "th-789" }
+  });
+});
+
+test("reads account token usage through selected launcher with onNotification support", async () => {
+  const notifications = [];
+  const fakeUsage = {
+    summary: { totalTokens: 12345 },
+    dailyUsageBuckets: []
+  };
+
+  const spawnImpl = (command, args) => {
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = { stdin, stdout, stderr, killed: false, kill() { this.killed = true; } };
+
+    let buffer = "";
+    stdin.setEncoding("utf8");
+    stdin.on("data", (chunk) => {
+      buffer += chunk;
+      while (buffer.includes("\n")) {
+        const idx = buffer.indexOf("\n");
+        const line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        if (msg.method === "initialize" && Object.hasOwn(msg, "id")) {
+          queueMicrotask(() => {
+            stdout.write(`${JSON.stringify({ id: msg.id, result: { userAgent: "test" } })}\n`);
+          });
+        } else if (msg.method === "initialized") {
+          // Send an asynchronous notification from server to client
+          queueMicrotask(() => {
+            stdout.write(`${JSON.stringify({
+              method: "thread/tokenUsage/updated",
+              params: { threadId: "th-1", turnId: "tu-1", tokenUsage: {} }
+            })}\n`);
+          });
+        } else if (msg.method === "account/usage/read") {
+          queueMicrotask(() => {
+            stdout.write(`${JSON.stringify({ id: msg.id, result: fakeUsage })}\n`);
+          });
+        }
+      }
+    });
+
+    return child;
+  };
+
+  const res = await readAccountUsage({
+    codexCommand: "codex",
+    spawnImpl,
+    onNotification: (notif) => notifications.push(notif)
+  });
+
+  assert.deepEqual(res.result, fakeUsage);
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].method, "thread/tokenUsage/updated");
 });
