@@ -286,7 +286,9 @@ test("measurements.jsonl persistence: appends, reads, filters by sessionKey, and
     assert.equal(filtered[0].turnKey, rec1.turnKey);
 
     // Fail-open test: unwritable path returns null and does not throw
-    const failPath = appendTurnMeasurement(rec1, "/dev/null/impossible");
+    const blockedFile = path.join(tmpDir, "blocked_file");
+    fs.writeFileSync(blockedFile, "not-a-directory");
+    const failPath = appendTurnMeasurement(rec1, path.join(blockedFile, "impossible"));
     assert.equal(failPath, null);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

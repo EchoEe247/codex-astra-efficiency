@@ -36,23 +36,32 @@ test("Phase 12: Fail-open - malformed token notification never throws and fails 
 });
 
 test("Phase 12: Fail-open - storage failure in appendTurnMeasurement returns null and never throws", () => {
-  const record = createTurnMeasurementRecord({
-    sessionKey: "s-1",
-    turnKey: "t-1",
-    model: "gpt-6-astra",
-    tokens: { inputTokens: 100, outputTokens: 20 }
-  });
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-failopen-test-"));
+  try {
+    const record = createTurnMeasurementRecord({
+      sessionKey: "s-1",
+      turnKey: "t-1",
+      model: "gpt-6-astra",
+      tokens: { inputTokens: 100, outputTokens: 20 }
+    });
 
-  assert.doesNotThrow(() => {
-    const res1 = appendTurnMeasurement(record, "/nonexistent_root_dir_impossible/meas");
-    assert.equal(res1, null);
+    const blockedFile = path.join(tmpDir, "blocked_file");
+    fs.writeFileSync(blockedFile, "not-a-directory");
+    const blockedDir = path.join(blockedFile, "impossible");
 
-    const res2 = appendTurnMeasurement(null, "/tmp");
-    assert.equal(res2, null);
+    assert.doesNotThrow(() => {
+      const res1 = appendTurnMeasurement(record, blockedDir);
+      assert.equal(res1, null);
 
-    const res3 = appendTurnMeasurement(record, null);
-    assert.equal(res3, null);
-  });
+      const res2 = appendTurnMeasurement(null, tmpDir);
+      assert.equal(res2, null);
+
+      const res3 = appendTurnMeasurement(record, null);
+      assert.equal(res3, null);
+    });
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test("Phase 12: Fail-open - missing token notification does not affect v0.1 readiness gating", () => {
