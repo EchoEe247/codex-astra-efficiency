@@ -7,6 +7,15 @@ Codex Binary: /root/.local/bin/codex (OpenAI Codex CLI 0.153.4)
 Observation Repository: EchoEe247/codex-astra-efficiency
 Target Work Product: EchoEe247/hermes-commerce-control
 
+## Errata / later hardening note — 2026-09-07
+
+This receipt remains historical evidence for the first passive sample and is not rewritten into a claim that the hardened capture path already passed live validation.
+
+Two later audit corrections apply when reading it:
+
+1. CAE opaque `sessionKey` / `turnKey` correlation uses deterministic **namespaced SHA-256 hashing**, not HMAC. The earlier HMAC wording was inaccurate terminology; no secret-key HMAC implementation existed in this candidate.
+2. The first sample proved the hook lifecycle and native rollout counters, but did **not** prove that the wired Stop-hook reader bound those counters to the same current turn. PR #22 was later hardened to require exact transient native `thread_id` / `turn_id` matching for tagged rollout records, isolate context metadata to that turn segment, refuse stale tagged fallback, and deduplicate repeated Stop measurements. That later code still requires the next genuine Astra maintenance sample before merge.
+
 ---
 
 ## 1. AUTHORITY & CANDIDATE IDENTITY
@@ -36,7 +45,7 @@ Target Work Product: EchoEe247/hermes-commerce-control
   - Absolute working directory path omitted: `YES` (`cwdPresent: true` flag only)
   - Repository name and path omitted: `YES`
   - Account identifier and credentials omitted: `YES`
-  - Raw native thread/turn UUIDs omitted: `YES` (HMAC SHA-256 opaque keys only)
+  - Raw native thread/turn UUIDs omitted: `YES` (namespaced SHA-256 opaque keys only)
 
 ---
 
