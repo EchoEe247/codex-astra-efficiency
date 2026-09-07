@@ -79,20 +79,26 @@ export function runHook(raw, options = {}) {
 
     if (input?.hook_event_name === "Stop" && typeof input?.transcript_path === "string") {
       try {
-        const rawUsage = readTokenUsageFromTranscript(input.transcript_path, options);
+        const rawUsage = readTokenUsageFromTranscript(input.transcript_path, {
+          ...options,
+          expectedThreadId:
+            typeof input?.session_id === "string" ? input.session_id : null,
+          expectedTurnId: typeof input?.turn_id === "string" ? input.turn_id : null
+        });
         if (rawUsage) {
           const measurement = createTurnMeasurementRecord({
             sessionKey: result.observation.sessionKey,
             turnKey: result.observation.turnKey,
             model: result.observation.model,
-            tokenUsage: rawUsage
+            tokenUsage: rawUsage,
+            attributionStatus: rawUsage.attributionStatus
           });
           if (measurement) {
             appendTurnMeasurement(measurement, result.config.dir);
           }
         }
       } catch {
-        // fail-open
+        // Token accounting is observational only and must always fail open.
       }
     }
   }
