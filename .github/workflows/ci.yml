@@ -30,3 +30,61 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm test
       - run: npm run check
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pack release artifact
+        run: npm pack --json > pack.json
+      - name: Verify package allowlist
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const report = JSON.parse(fs.readFileSync('pack.json', 'utf8'))[0];
+          const files = new Set(report.files.map((entry) => entry.path));
+          const required = [
+            'bin/cae.js',
+            'src/hook.js',
+            'src/token-usage.js',
+            'README.md',
+            'LICENSE'
+          ];
+          for (const file of required) {
+            if (!files.has(file)) throw new Error(`packed artifact missing required file: ${file}`);
+          }
+          for (const file of files) {
+            if (
+              file.startsWith('test/') ||
+              file.startsWith('receipts/') ||
+              file.startsWith('trackers/')
+            ) {
+              throw new Error(`packed artifact unexpectedly includes internal file: ${file}`);
+            }
+          }
+          fs.writeFileSync('packed-name.txt', `${report.filename}\n`);
+          NODE
+      - name: Install packed artifact in isolation
+        run: |
+          package_file="$(cat packed-name.txt)"
+          npm install --prefix .ci-install "./${package_file}"
+      - name: Smoke installed CLI and hook ownership cycle
+        run: |
+          mkdir -p .ci-codex
+          cli="$PWD/.ci-install/node_modules/codex-astra-efficiency/bin/cae.js"
+          node "$cli" --help
+          CODEX_HOME="$PWD/.ci-codex" CAE_STATE_DIR="$PWD/.ci-state" node "$cli" setup
+          CODEX_HOME="$PWD/.ci-codex" CAE_STATE_DIR="$PWD/.ci-state" node "$cli" setup
+          CODEX_HOME="$PWD/.ci-codex" CAE_STATE_DIR="$PWD/.ci-state" node "$cli" uninstall
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const hooks = JSON.parse(fs.readFileSync('.ci-codex/hooks.json', 'utf8'));
+          if (Object.keys(hooks.hooks ?? {}).length !== 0) {
+            throw new Error('installed-artifact setup/uninstall cycle left CAE hook state behind');
+          }
+          NODE
