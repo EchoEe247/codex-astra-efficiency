@@ -1,14 +1,14 @@
 # Install and first use
 
-Codex Astra Efficiency (CAE) is designed to sit beside the normal Codex CLI. You still launch Codex normally and select Astra through Codex's native `/model` picker.
+Codex Astra Efficiency (CAE) sits beside the normal Codex CLI. You still launch Codex normally and select Astra through Codex's native `/model` picker.
 
-## Supported v0.1 surface
+## v0.1.0 support surface
 
 - ChatGPT Plus + Codex
 - Node.js 20 or newer
 - Linux, Windows, and macOS for the automated CLI/test surface
-- `codexu` (Ubuntu-under-Termux) is the validated Android live-Astra runtime
-- native Termux Codex is **not** part of the declared v0.1 support surface unless that separate compatibility lane passes before release
+- `codexu` (Ubuntu-under-Termux) as the validated Android live-Astra runtime
+- native Termux Codex is **unsupported under the currently validated upstream Android distribution**
 
 CAE does not replace Codex authentication and does not collect OpenAI credentials.
 
@@ -20,19 +20,19 @@ Install the global CLI from npm:
 npm install -g codex-astra-efficiency
 ```
 
-Alternatively, install from a downloaded GitHub Release package artifact:
+Or install the downloaded `v0.1.0` GitHub Release artifact:
 
 ```bash
 npm install -g ./codex-astra-efficiency-0.1.0.tgz
 ```
 
-Verify that the CLI is available:
+Verify the CLI:
 
 ```bash
 cae doctor
 ```
 
-If your working Codex command is a wrapper or lives at a nonstandard path, use the same executable with CAE:
+If your working Codex command is a wrapper or lives at a nonstandard path, point CAE at that same executable:
 
 ```bash
 CAE_CODEX_COMMAND=/path/to/codex cae doctor
@@ -40,9 +40,11 @@ CAE_CODEX_COMMAND=/path/to/codex cae doctor
 
 On Windows, set the equivalent environment variable in your shell and use the normal `codex.cmd` installation unless your setup requires a different launcher.
 
-## One-time Astra target configuration
+The override is an executable path/name, not a shell pipeline or arbitrary shell script expression.
 
-v0.1 targets the exact native Astra model id observed in Codex:
+## Configure the Astra target once
+
+`v0.1.0` targets the exact native Astra model id observed in Codex:
 
 ```bash
 cae target set gpt-6-astra
@@ -58,13 +60,13 @@ CAE uses exact matching. Other Codex models are not routed, replaced, or managed
 
 ## Install the Codex hooks
 
-Preview the change first if you want:
+Preview the change:
 
 ```bash
 cae setup --dry-run
 ```
 
-Install the CAE-owned hooks:
+Then install the CAE-owned hooks:
 
 ```bash
 cae setup
@@ -72,9 +74,9 @@ cae setup
 
 CAE adds only its `UserPromptSubmit` and `Stop` handlers. Existing unrelated hook groups and handlers are preserved.
 
-The next time Codex asks you to review hooks, review the CAE handlers normally and trust/enable them if you want CAE active. CAE does not bypass Codex's native hook-review UX.
+If Codex asks you to review hooks, review the CAE handlers through the normal Codex trust flow and enable them if you want CAE active. CAE does not bypass that UX.
 
-## Check readiness before using Astra
+## Check readiness before spending Astra allowance
 
 Run:
 
@@ -90,7 +92,7 @@ ready_for_live_hook_capture
 
 Readiness requires the native Astra target, usable quota/model reads, a callable CAE hook command, and installed CAE hooks. If CAE cannot prove a prerequisite, it reports a non-ready state instead of guessing.
 
-You can inspect the current native Plus windows separately:
+Inspect the native Plus windows separately with:
 
 ```bash
 cae quota
@@ -100,15 +102,17 @@ Missing or ambiguous quota data is reported as unavailable/unknown rather than z
 
 ## Use Codex normally
 
-Launch Codex the way you normally do, then select Astra through native `/model`:
+Launch Codex the same way you normally do and select Astra through native `/model`:
 
 ```text
 /model
 ```
 
-Choose **GPT-6-Astra** and work normally. CAE does not require a custom prompt format, custom agent UI, proxy, or task DSL.
+Choose **GPT-6-Astra** and work normally.
 
-You can inspect privacy-safe local observations with:
+There is no CAE prompt format, custom agent UI, proxy, or task DSL. That is intentional: the product is supposed to observe the normal Codex workflow rather than replace it.
+
+Inspect privacy-safe local observations with:
 
 ```bash
 cae events
@@ -116,33 +120,33 @@ cae events
 
 CAE observations do not persist raw prompts, model responses, source code, raw cwd paths, account identity, or raw native session/turn ids.
 
-## Uninstall CAE hooks
+## Remove CAE
 
-Preview:
+Preview hook removal:
 
 ```bash
 cae uninstall --dry-run
 ```
 
-Remove only the CAE-owned hooks:
+Remove CAE-owned hooks:
 
 ```bash
 cae uninstall
 ```
 
-Uninstall does not intentionally remove unrelated Codex hook groups or handlers. If a mixed hook group contains both CAE and user handlers, only the CAE handler is removed.
+Uninstall does not intentionally remove unrelated Codex hook groups or handlers. If a mixed hook group contains CAE and user handlers, only the CAE handler is removed.
 
-To remove the global package afterward:
+Then remove the global package if wanted:
 
 ```bash
 npm uninstall -g codex-astra-efficiency
 ```
 
-The package uninstall and hook uninstall are separate on purpose: run `cae uninstall` before removing the CLI so CAE can clean up its own hook entries.
+The hook cleanup and package uninstall are separate on purpose. Run `cae uninstall` while the CLI still exists so CAE can clean up its own configuration safely.
 
 ## Local state and privacy
 
-CAE stores local state under the platform state directory. On typical Unix-like systems this is:
+CAE stores local state under the platform state directory. On a typical Unix-like system:
 
 ```text
 ~/.local/state/codex-astra-efficiency
@@ -150,13 +154,13 @@ CAE stores local state under the platform state directory. On typical Unix-like 
 
 `XDG_STATE_HOME`, `LOCALAPPDATA` on Windows, and `CAE_STATE_DIR` can change the location.
 
-The default design is local-only. Do not attach raw Codex transcripts, source repositories, credentials, or account data when filing issues.
+The default design is local-only. When filing an issue, do not attach raw Codex transcripts, source repositories, credentials, or account data.
 
 ## Troubleshooting
 
 ### `cae` is not found
 
-Confirm the global npm bin directory is on `PATH` and reinstall the package artifact if necessary.
+Confirm the global npm bin directory is on `PATH` and reinstall the package if needed.
 
 ### `cae readiness` says the hook command is unavailable
 
@@ -166,7 +170,7 @@ Run:
 cae doctor
 ```
 
-Check that the installed `cae` command is executable/callable in the same environment where Codex runs.
+Confirm that the installed `cae` command is callable in the same environment where Codex runs.
 
 ### `native_hooks_not_installed`
 
@@ -190,13 +194,17 @@ Do not use a shell pipeline or arbitrary shell command as the launcher override.
 
 ### Native Termux
 
-The first release does not claim native Termux Codex support unless the separate compatibility lane is explicitly completed before release. The validated Android live runtime is Ubuntu-under-Termux (`codexu`).
+Native Termux Codex is not supported by CAE under the currently validated upstream Android distribution. Local Codex diagnostics may work, but external authoritative quota/readiness reads fail in the validated native environment. CAE should report degraded/unavailable state and block Astra readiness rather than guess.
 
-## What v0.1 does not claim
+Use the validated `codexu` / Ubuntu-under-Termux path for Android CAE work. A PRoot wrapper counts as that compatibility path, not as native-Termux support.
+
+See `docs/CODEX_COMPATIBILITY.md` for the evidence and reopen condition.
+
+## What v0.1.0 does not claim
 
 - CAE does not increase or bypass OpenAI usage limits.
 - CAE does not promise a fixed percentage of Astra savings.
 - CAE does not silently substitute another model for Astra.
-- CAE does not yet claim a validated default efficiency intervention unless the final release evidence establishes one.
+- CAE does not claim a default efficiency intervention that has not passed real-work validation.
 
-The first release prioritizes trustworthy observation, safe integration, and a normal Codex workflow.
+The first release prioritizes trustworthy observation, safe integration, and the normal Codex workflow.

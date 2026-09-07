@@ -1,28 +1,28 @@
 # CAE Measurement Model
 
-Status: **pre-Astra measurement authority**.
+Status: **v0.1 observability authority / post-release measurement baseline**.
 
 ## Purpose
 
 CAE exists to help ChatGPT Plus users get more useful real work from GPT-6 Astra in normal Codex without turning Codex into a different agent framework.
 
-That requires separating what CAE **observes** from what it **infers**.
+For that to be trustworthy, the project has to keep one distinction clear: what CAE **observes** is not the same thing as what CAE **infers**.
 
 A short or cheap run is not automatically efficient. A long or expensive run is not automatically wasteful.
 
-The project therefore uses this evidence hierarchy:
+Use this evidence hierarchy:
 
-1. **Observed facts** — directly reported by Codex or deliberately recorded by the test campaign.
-2. **Derived measurements** — deterministic calculations from observed facts, such as a stable-window percentage delta.
+1. **Observed facts** — directly reported by Codex or deliberately recorded by a controlled campaign.
+2. **Derived measurements** — deterministic calculations from those facts, such as a stable-window percentage delta.
 3. **Signals** — patterns worth investigating, such as repeated unchanged reads or large scope expansion.
 4. **Efficiency hypotheses** — proposed mechanisms that may reduce avoidable burn.
-5. **Validated interventions** — changes that survived real-work testing with quality guardrails.
+5. **Validated interventions** — changes that survive real-work testing with quality guardrails.
 
-CAE must not skip directly from an observed fact to a product claim.
+CAE should not jump from an observation directly to a product claim because the conclusion sounds reasonable.
 
 ## Run descriptor
 
-The baseline receipt should prefer coarse, privacy-safe descriptors rather than repository content:
+Prefer coarse, privacy-safe descriptors rather than repository content:
 
 - plan tier;
 - exact Astra model identity;
@@ -31,20 +31,20 @@ The baseline receipt should prefer coarse, privacy-safe descriptors rather than 
 - Standard/Fast service tier when exposed;
 - task class;
 - project-scale bucket;
-- fresh task vs continuation;
+- fresh task versus continuation;
 - context-size bucket when exposed reliably.
 
-Do not require prompts, code, repository names, file paths, transcript text, account IDs, or user identity to compare Astra runs.
+Do not require prompts, code, repository names, file paths, transcript text, account IDs, or user identity to compare runs.
 
 ## Allowance observations
 
-When available from Codex, record independently:
+When Codex exposes them, record independently:
 
 - 5-hour window start/end used percentage and reset authority;
 - weekly window start/end used percentage and reset authority;
 - ordinary included-usage permission;
-- model-specific/multi-bucket limit state;
-- purchased-credit balance if the native rate-limit response exposes it;
+- model-specific or multi-bucket limit state;
+- purchased-credit balance when exposed natively;
 - reset-credit availability when exposed.
 
 A missing window is `not_reported`, not zero and not unlimited.
@@ -53,49 +53,44 @@ A reset-crossing or non-monotonic percentage change is not labeled as usage burn
 
 ### Model-aware quota authority
 
-Current Codex app-server responses can contain both a default rate-limit snapshot and `rateLimitsByLimitId` buckets. A bucket may also expose `normalModelSlug`, described upstream as the normal model whose display name and reasoning options describe that quota alias.
+Codex app-server responses can contain a default rate-limit snapshot plus `rateLimitsByLimitId` buckets. A bucket can also expose `normalModelSlug`, which can identify the normal model associated with that quota alias.
 
-CAE must not assume the default snapshot is always the only relevant meter for Astra.
+CAE must not assume the default snapshot is always Astra's only relevant meter.
 
 Selection rules:
 
 1. If exactly one normalized bucket has `normalModelSlug` exactly matching the active native Astra model id, use that bucket as the model-specific authority.
-2. If more than one bucket exactly matches the model, report the authority as ambiguous and do not choose one heuristically.
+2. If more than one bucket exactly matches, report ambiguity instead of choosing heuristically.
 3. If no exact model bucket exists and the default snapshot has no `normalModelSlug`, the default can be used as a **shared account allowance** authority.
 4. If the default explicitly names a different model, do not use it as Astra's authority.
-5. Do not infer model identity from `limitName`, display text, bucket key substrings, or percentages.
-6. Start and end snapshots must use the same authority kind/key. If the backend changes authority shape during a run, record `authority_changed` rather than combining two different meters.
+5. Do not infer model identity from `limitName`, display text, bucket-key substrings, or percentages.
+6. Start and end snapshots need the same authority kind/key. If the backend changes authority shape during a run, record `authority_changed` rather than combining different meters.
 
-A shared-default delta is still useful evidence, but it should remain labeled shared. It can be contaminated by simultaneous activity elsewhere on the same allowance, so the baseline should avoid concurrent Codex work when establishing controlled Astra cost curves.
+A shared-default delta is still useful evidence, but it stays labeled shared. Simultaneous activity elsewhere on the same allowance can contaminate it, so controlled cost observations should avoid unrelated concurrent Codex work.
 
 ## Work evidence
 
 Where it can be recorded without changing normal Codex behavior, capture:
 
 - wall-clock runtime;
-- whether the requested objective completed;
+- whether the objective completed;
 - validation/test status;
 - human intervention count;
-- subagent count or delegated-worker activity;
-- coarse tool classes used, such as shell, code edit, build, tests, Git, search, browser/computer;
-- whether the run expanded materially beyond the requested scope;
-- whether substantial rework was needed afterward;
-- whether the run was mainly reconnaissance/assessment, implementation, validation, or mixed work.
+- subagent or delegated-worker activity;
+- coarse tool classes such as shell, code edit, build, tests, Git, search, browser/computer;
+- material scope expansion;
+- substantial rework afterward;
+- whether the run was mainly reconnaissance, implementation, validation, or mixed work.
 
 Unknown evidence stays unknown.
 
 ## Why these fields matter
 
-Early Astra Pro field reports show that similar wall-clock durations can have very different allowance costs depending on task breadth, reasoning mode, project scale, context state, and tool use.
+Early Astra field reports showed that similar wall-clock durations could have very different allowance costs depending on task breadth, reasoning mode, project scale, context state, and tool use.
 
-Examples already recorded in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md` include:
+That means I do not want CAE optimized around prompts-per-week or minutes-per-week. Those numbers are easy to count but do not describe useful work by themselves.
 
-- a broad codebase audit with high weekly burn despite no subagents;
-- browser/computer research at Medium with noticeable burn but materially faster execution;
-- a short cross-service migration run over a 19-microservice project with high weekly burn;
-- reconnaissance/refactor assessment consuming meaningful purchased credits.
-
-Therefore CAE should not optimize for prompts per week or minutes per week.
+Historical examples remain in `docs/ASTRA_PRO_USAGE_FIELD_NOTES_2026-09-04.md` and the Plus campaign records.
 
 ## Core evaluation target
 
@@ -103,9 +98,9 @@ The long-term target is approximately:
 
 `useful completed work / Astra allowance burn`
 
-But CAE v0.x must **not** emit a universal numeric efficiency score before the project has enough evidence to define one without misleading users.
+CAE v0.x should **not** emit a universal numeric efficiency score until there is enough evidence to define one without misleading users.
 
-The initial product should show the underlying measurements and clearly separate facts from interpretation.
+The product should expose the underlying measurements first and keep fact separate from interpretation.
 
 ## Avoidable-burn candidates
 
@@ -116,17 +111,17 @@ These are research targets, not confirmed waste:
 - redundant validation after no relevant change;
 - unrequested scope expansion;
 - repeated context reconstruction after compaction;
-- same information gathered independently by multiple workers;
-- expensive reconnaissance that does not lead to a decision, implementation, or diagnostic result.
+- the same information gathered independently by multiple workers;
+- expensive reconnaissance that does not lead to a decision, implementation, or useful diagnostic result.
 
-A behavior only becomes an optimization target after the Plus baseline demonstrates both:
+A behavior becomes an optimization target only after evidence shows both:
 
-1. it contributes meaningfully to Astra allowance burn; and
+1. it contributes meaningfully to allowance burn; and
 2. reducing it does not materially degrade completion quality, validation quality, or user autonomy.
 
 ## Product guardrail
 
-CAE must never make an efficiency claim solely because a configuration:
+CAE must not make an efficiency claim solely because a configuration:
 
 - shortens runtime;
 - uses a lower reasoning setting;
@@ -140,6 +135,6 @@ The quality guardrail remains:
 
 ## Privacy rule
 
-The default measurement path should be useful without storing user project content.
+The default measurement path should be useful without storing project content.
 
-If a future advanced local-only feature needs richer data, it must be separately justified and opt-in. Public/exported receipts should remain anonymized by construction.
+If a future advanced local-only feature needs richer data, it must be separately justified and opt-in. Public or exported receipts should remain anonymized by construction.
