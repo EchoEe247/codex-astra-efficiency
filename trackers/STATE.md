@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: **2026-09-06**
+Last updated: **2026-09-07**
 
 This is the current-state entry point for Codex Astra Efficiency. Detailed Window 0, release-candidate, and pre-v0.1 evidence remains under `receipts/` and the dated documents in `docs/`; those records should not be mistaken for the current project phase simply because they are more detailed.
 
@@ -27,13 +27,22 @@ The next direction is not to manufacture a bigger feature list. It is to learn f
 
 PR #22, `Add passive native token-accounting foundation`, is open on `post-v0.1/token-accounting-foundation`.
 
-Current PR disposition at this state update:
+Current audited disposition:
 
-- deterministic local token-accounting foundation implemented;
-- privacy-safe numeric capture and local measurement storage implemented on the branch;
-- cross-platform CI reported green for the branch evidence;
-- first genuine passive sample recorded;
-- **not ready to merge yet** — the hardened Stop-hook extraction is waiting for the next genuine passive Astra maintenance sample before merge.
+- branch synchronized with current `main` through merge commit `da435fc9285dc0c1214bef0e0b1ff3252ae48aec`;
+- deterministic native token normalizer and local `measurements.jsonl` storage implemented;
+- Stop-hook transcript capture hardened to match tagged native `thread_id` / `turn_id` against the exact current Stop hook before accepting counters;
+- tagged current-turn-not-flushed state now produces no measurement instead of inheriting the previous turn;
+- context-window metadata is constrained to the selected token-record segment;
+- multiple unidentified token records are never guessed between; a single unidentified compatibility record is explicitly `unverified_single_record`;
+- duplicate most-recent Stop measurements are idempotent;
+- `sessionKey` / `turnKey` cryptography is documented accurately as deterministic namespaced SHA-256, not HMAC;
+- `cae tokens --last-turn` and default `cae receipt` use bounded reverse-tail reads rather than rereading complete append-only history;
+- receipt/measurement writers correct broader existing POSIX state modes where implemented;
+- CI run `34116684948` passed Ubuntu Node 20/22, Windows Node 22, macOS Node 22, and the installed-package smoke job;
+- package smoke PASS included `npm pack`, package-allowlist verification, isolated tarball install, installed CLI execution, and setup/setup/uninstall ownership validation;
+- first genuine passive sample remains historical partial evidence: hook lifecycle/native counters were observed, but the hardened exact-turn transcript binding was not exercised by that sample;
+- **PR #22 remains DO NOT MERGE** until the next genuine Astra maintenance turn proves `attributionStatus=matched_turn` on the exact frozen candidate and the persisted counters agree with the native rollout record.
 
 This work advances post-v0.1 measurement. It does not retroactively change what `v0.1.0` claims.
 
