@@ -27,7 +27,6 @@ test("Phase 11: Privacy - persisted normalized record contains NONE of adversari
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cae-privacy-test-"));
 
   try {
-    // Construct record with adversarial payload attempting to inject sensitive values
     const record = createTurnMeasurementRecord({
       sessionKey: ADVERSARIAL_LEAK_SAMPLES.threadId,
       turnKey: ADVERSARIAL_LEAK_SAMPLES.turnId,
@@ -59,7 +58,6 @@ test("Phase 11: Privacy - persisted normalized record contains NONE of adversari
     const serializedRecord = JSON.stringify(record);
     const fileContent = fs.readFileSync(writtenPath, "utf8");
 
-    // Test that none of the adversarial raw values leak into serialized record or file
     for (const [fieldName, sensitiveValue] of Object.entries(ADVERSARIAL_LEAK_SAMPLES)) {
       assert.equal(
         serializedRecord.includes(sensitiveValue),
@@ -73,33 +71,33 @@ test("Phase 11: Privacy - persisted normalized record contains NONE of adversari
       );
     }
 
-    // Verify stored keys are opaque hashes
     assert.equal(record.sessionKey, opaqueKey("session", ADVERSARIAL_LEAK_SAMPLES.threadId));
     assert.equal(record.turnKey, opaqueKey("turn", ADVERSARIAL_LEAK_SAMPLES.turnId));
 
-    // Confirm that raw native threadId and turnId keys are not present on the record
     assert.equal("threadId" in record, false);
     assert.equal("turnId" in record, false);
     assert.equal("prompt" in record.tokens, false);
     assert.equal("response" in record.tokens, false);
     assert.equal("apiKey" in record.tokens, false);
+
+    const stored = readTurnMeasurements(tmpDir);
+    assert.equal(stored.length, 1);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-test("Phase 11: Privacy - opaque ID hashing is deterministic for correlation and non-reversible", () => {
+test("Phase 11: Privacy - namespaced SHA-256 opaque ID hashing is deterministic for correlation", () => {
   const nativeThreadId = "019550b7-f41e-72cb-b5ce-615f0fa4b111";
   const nativeTurnId = "019550b7-f82a-71dd-9337-33fa0f15c222";
 
   const key1 = opaqueKey("turn", nativeTurnId);
   const key2 = opaqueKey("turn", nativeTurnId);
-  assert.equal(key1, key2, "Turn key hashing must be deterministic for correlation");
+  assert.equal(key1, key2, "Turn-key hashing must be deterministic for correlation");
 
   const sessionKey = opaqueKey("session", nativeThreadId);
   assert.notEqual(key1, sessionKey, "Different namespaces must yield distinct keys");
 
-  // Non-reversibility: SHA-256 HMAC-equivalent output has fixed 64-char hex form
   assert.match(key1, /^[0-9a-f]{64}$/);
   assert.match(sessionKey, /^[0-9a-f]{64}$/);
   assert.equal(key1.includes(nativeTurnId), false);
