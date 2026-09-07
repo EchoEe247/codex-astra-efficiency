@@ -1,0 +1,9 @@
+{
+  "last": {
+    "inputTokens": "not-a-number",
+    "cachedInputTokens": "1000",
+    "outputTokens": "infinite",
+    "totalTokens": "bad"
+  },
+  "modelContextWindow": "twenty-k"
+}

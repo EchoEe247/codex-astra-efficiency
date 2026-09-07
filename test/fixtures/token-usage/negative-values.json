@@ -1,0 +1,10 @@
+{
+  "last": {
+    "inputTokens": -500,
+    "cachedInputTokens": -100,
+    "outputTokens": -50,
+    "reasoningOutputTokens": -10,
+    "totalTokens": -550
+  },
+  "modelContextWindow": -128000
+}

@@ -15,7 +15,9 @@ import { CAE_HOOK_COMMAND } from "../src/hooks-config.js";
 import { summarizeAstraDiscovery } from "../src/model-discovery.js";
 import { normalizeRateLimitResponse } from "../src/rate-limits.js";
 import { summarizeAstraReadiness } from "../src/readiness.js";
+import { readLastReceipt } from "../src/receipts.js";
 import { applyHookSetup, planHookSetup } from "../src/setup.js";
+import { formatTurnMeasurement, readLastTurnMeasurement } from "../src/token-usage.js";
 
 async function readStdin() {
   let data = "";
@@ -198,7 +200,6 @@ async function main() {
       process.stdout.write(`${JSON.stringify(response)}\n`);
       return;
     } catch (error) {
-      // A CAE observation failure must not block the user's Codex turn.
       process.stderr.write(`cae hook error: ${error.message}\n`);
       process.stdout.write(`${JSON.stringify({ continue: true, suppressOutput: true })}\n`);
       process.exitCode = 0;
@@ -315,8 +316,48 @@ async function main() {
     return;
   }
 
+  if (command === "tokens") {
+    const config = loadConfig();
+    const record = readLastTurnMeasurement(config.dir);
+    if (!record) {
+      process.stdout.write("No turn measurement recorded.\n");
+      return;
+    }
+    if (flags.has("--json")) {
+      process.stdout.write(`${JSON.stringify(record, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(formatTurnMeasurement(record));
+    return;
+  }
+
+  if (command === "receipt") {
+    const config = loadConfig();
+    if (flags.has("--last-turn")) {
+      const record = readLastTurnMeasurement(config.dir);
+      if (!record) {
+        process.stdout.write("No turn measurement recorded.\n");
+        return;
+      }
+      if (flags.has("--json")) {
+        process.stdout.write(`${JSON.stringify(record, null, 2)}\n`);
+        return;
+      }
+      process.stdout.write(formatTurnMeasurement(record));
+      return;
+    }
+
+    const receipt = readLastReceipt(config.dir);
+    if (!receipt) {
+      process.stdout.write("No receipts recorded.\n");
+      return;
+    }
+    process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
+    return;
+  }
+
   process.stdout.write(
-    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae readiness  # zero-inference Astra candidate/target/quota readiness summary\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae target show|set <exact-model-id>|clear  # validation/compatibility control\n  cae quota  # read local Codex Plus rate-limit windows\n  cae hook   # internal Codex hook handler\n  cae events\n\nLauncher override:\n  CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness\n"
+    "Codex Astra Efficiency\n\nUsage:\n  cae doctor\n  cae probe  # read-only native Codex quota/model integration probe\n  cae readiness  # zero-inference Astra candidate/target/quota readiness summary\n  cae setup [--dry-run]\n  cae uninstall [--dry-run]\n  cae target show|set <exact-model-id>|clear  # validation/compatibility control\n  cae quota  # read local Codex Plus rate-limit windows\n  cae tokens [--last-turn] [--json]  # native per-turn token processing summary\n  cae receipt [--last-turn]  # latest run receipt or last-turn token measurement\n  cae hook   # internal Codex hook handler\n  cae events\n\nLauncher override:\n  CAE_CODEX_COMMAND=/path/to/codex-or-wrapper cae readiness\n"
   );
 }
 

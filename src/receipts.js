@@ -5,6 +5,7 @@ import { normalizeCompletionEvidence, normalizeRunDescriptor } from "./measureme
 import { calculateModelUsageDelta, normalizeRateLimitResponse } from "./rate-limits.js";
 
 export const RECEIPT_SCHEMA_VERSION = 3;
+export const LAST_RECEIPT_SCAN_BYTES = 64 * 1024;
 export const RECEIPT_OUTCOMES = Object.freeze([
   "PASS",
   "PARTIAL",
@@ -51,6 +52,18 @@ function requireEnum(value, allowed, field) {
     throw new TypeError(`unsupported ${field}: ${value}`);
   }
   return value;
+}
+
+function enforcePrivateMode(fileOrDir, mode) {
+  if (process.platform === "win32") return;
+  try {
+    const stat = fs.statSync(fileOrDir);
+    if ((stat.mode & 0o077) !== 0) {
+      fs.chmodSync(fileOrDir, mode);
+    }
+  } catch {
+    // Best-effort hardening only.
+  }
 }
 
 export function startRunReceipt({
@@ -176,10 +189,74 @@ export function appendReceipt(receipt, dir) {
   if (typeof dir !== "string" || !dir) throw new TypeError("receipt directory is required");
 
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  enforcePrivateMode(dir, 0o700);
   const file = path.join(dir, "receipts.jsonl");
   fs.appendFileSync(file, `${JSON.stringify(receipt)}\n`, {
     encoding: "utf8",
     mode: 0o600
   });
+  enforcePrivateMode(file, 0o600);
   return file;
+}
+
+/**
+ * Read only the newest valid JSON receipt from an append-only history file.
+ * The bounded reverse-tail scan avoids making `cae receipt` O(total history).
+ */
+export function readLastReceipt(
+  dir,
+  { maxScanBytes = LAST_RECEIPT_SCAN_BYTES } = {}
+) {
+  if (typeof dir !== "string" || !dir) return null;
+  const file = path.join(dir, "receipts.jsonl");
+
+  let fd = null;
+  try {
+    const stat = fs.statSync(file);
+    if (!stat.isFile() || stat.size === 0) return null;
+
+    const scanBytes =
+      Number.isSafeInteger(maxScanBytes) && maxScanBytes > 0
+        ? maxScanBytes
+        : LAST_RECEIPT_SCAN_BYTES;
+    const readSize = Math.min(stat.size, scanBytes);
+    const startOffset = stat.size - readSize;
+
+    fd = fs.openSync(file, "r");
+    const buffer = Buffer.alloc(readSize);
+    const bytesRead = fs.readSync(fd, buffer, 0, readSize, startOffset);
+    if (bytesRead <= 0) return null;
+
+    let text = buffer.toString("utf8", 0, bytesRead);
+    if (startOffset > 0) {
+      const firstNewline = text.indexOf("\n");
+      if (firstNewline === -1) return null;
+      text = text.slice(firstNewline + 1);
+    }
+
+    const lines = text.split("\n");
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i]?.trim();
+      if (!line) continue;
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // Skip malformed trailing/individual lines and keep scanning backward.
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // Best-effort cleanup.
+      }
+    }
+  }
 }

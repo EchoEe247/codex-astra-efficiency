@@ -43,6 +43,36 @@ export function modelListRequest(id = 2, params = {}) {
   });
 }
 
+export function accountUsageRequest(id = 2, params = {}) {
+  const safeParams = {};
+  if (typeof params?.threadId === "string" && params.threadId.trim()) {
+    safeParams.threadId = params.threadId.trim();
+  }
+  return appServerRequest(
+    id,
+    "account/usage/read",
+    Object.keys(safeParams).length > 0 ? safeParams : undefined
+  );
+}
+
+export function parseThreadTokenUsageNotification(message) {
+  if (
+    !message ||
+    typeof message !== "object" ||
+    message.method !== "thread/tokenUsage/updated" ||
+    !message.params ||
+    typeof message.params !== "object"
+  ) {
+    return null;
+  }
+  const { threadId, turnId, tokenUsage } = message.params;
+  return {
+    threadId: typeof threadId === "string" && threadId.trim() ? threadId.trim() : null,
+    turnId: typeof turnId === "string" && turnId.trim() ? turnId.trim() : null,
+    tokenUsage: tokenUsage && typeof tokenUsage === "object" ? tokenUsage : null
+  };
+}
+
 export function resolveCodexCommand({
   codexCommand = null,
   env = process.env,
@@ -178,7 +208,8 @@ async function requestLocalCodex({
   env = process.env,
   platform = process.platform,
   timeoutMs = 8000,
-  spawnImpl = spawn
+  spawnImpl = spawn,
+  onNotification = null
 }) {
   const command = resolveCodexCommand({ codexCommand, env, platform });
   const invocation = prepareProcessInvocation(
@@ -233,8 +264,35 @@ async function requestLocalCodex({
       }
       safeKill(child);
 
-      if (err) reject(err);
-      else resolve(result);
+      function finish(settleErr, settleResult) {
+        if (settleErr) reject(settleErr);
+        else resolve(settleResult);
+      }
+
+      if (
+        typeof child.exitCode === "number" ||
+        typeof child.signalCode === "string" ||
+        typeof child.once !== "function"
+      ) {
+        finish(err, result);
+        return;
+      }
+
+      let closed = false;
+      const cleanupTimer = setTimeout(() => {
+        if (!closed) {
+          closed = true;
+          finish(err, result);
+        }
+      }, 500);
+
+      child.once("close", () => {
+        if (!closed) {
+          closed = true;
+          clearTimeout(cleanupTimer);
+          finish(err, result);
+        }
+      });
     }
 
     child.on?.("error", (err) => {
@@ -279,6 +337,15 @@ async function requestLocalCodex({
       }
 
       try {
+        if (message?.method && !Object.prototype.hasOwnProperty.call(message, "id")) {
+          try {
+            onNotification?.(message);
+          } catch {
+            // Notifications must never disrupt request lifecycle
+          }
+          return;
+        }
+
         if (message?.id === initId) {
           if (message.error) {
             throw new Error(`codex_app_server_initialize_failed:${message.error.message ?? "unknown"}`);
@@ -348,5 +415,21 @@ export function readModelList({ cursor = null, limit = 100, includeHidden = fals
     ...options,
     method: "model/list",
     params: { cursor, limit, includeHidden }
+  });
+}
+
+/**
+ * Read account token usage / credit estimation from local Codex app-server.
+ * Keep semantically separate from per-turn physical token counters.
+ */
+export function readAccountUsage({ threadId = null, ...options } = {}) {
+  const params =
+    typeof threadId === "string" && threadId.trim()
+      ? { threadId: threadId.trim() }
+      : undefined;
+  return requestLocalCodex({
+    ...options,
+    method: "account/usage/read",
+    params
   });
 }
